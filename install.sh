@@ -101,6 +101,7 @@ Usage:
 Options:
   -h, --help       Show this help message and exit
   -d, --doctor     Run system diagnostic report and verify installation health
+  -f, --force      Force full package re-download even if already up to date
 
 Arguments:
   [path/to/fdm.deb] Optional local debian package file to install offline
@@ -215,7 +216,9 @@ run_doctor() {
     exit 0
 }
 
+FORCE_DOWNLOAD=false
 LOCAL_DEB=""
+
 for arg in "$@"; do
     case "$arg" in
         -h|--help)
@@ -223,6 +226,9 @@ for arg in "$@"; do
             ;;
         -d|--doctor|--status|--check)
             run_doctor
+            ;;
+        -f|--force)
+            FORCE_DOWNLOAD=true
             ;;
         *.deb)
             if [ -f "$arg" ]; then
@@ -259,36 +265,68 @@ fi
 # Gracefully terminate running FDM instances before extraction
 pkill -x fdm 2>/dev/null || true
 
-info "[2/6] Extracting Free Download Manager package..."
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 cd "$TMP_DIR" || exit 1
 
-if [ -n "$LOCAL_DEB" ]; then
-    info "Using local deb package: $LOCAL_DEB"
-    cp "$LOCAL_DEB" fdm.deb
-else
-    curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+# Check existing installed version to avoid redundant 40MB re-downloads
+CURRENT_VERSION=""
+if [ -f /opt/freedownloadmanager/.version ]; then
+    CURRENT_VERSION=$(cat /opt/freedownloadmanager/.version | tr -d '[:space:]')
 fi
 
-# Verify archive integrity
-if ! ar t fdm.deb >/dev/null 2>&1; then
-    error "Downloaded package is corrupted or incomplete. Please check your internet connection and retry."
-    exit 1
-fi
-
-ar x fdm.deb
-$SUDO tar -xf data.tar.* -C /
-$SUDO chmod +x /opt/freedownloadmanager/fdm /opt/freedownloadmanager/wenativehost 2>/dev/null || true
-
-# Save version metadata
-CONTROL_TAR=$(ar t fdm.deb | grep "control.tar" | head -n 1 || true)
-if [ -n "$CONTROL_TAR" ]; then
-    ar p fdm.deb "$CONTROL_TAR" > "$TMP_DIR/$CONTROL_TAR" 2>/dev/null || true
-    FDM_VER=$(tar -xaf "$TMP_DIR/$CONTROL_TAR" -O ./control 2>/dev/null | grep -i '^Version:' | awk '{print $2}' || true)
-    if [ -n "$FDM_VER" ]; then
-        echo "$FDM_VER" | $SUDO tee /opt/freedownloadmanager/.version >/dev/null
+SKIP_DOWNLOAD=false
+if [ -z "$LOCAL_DEB" ] && [ "$FORCE_DOWNLOAD" != "true" ] && [ -f /opt/freedownloadmanager/fdm ] && [ -n "$CURRENT_VERSION" ]; then
+    info "Checking upstream version metadata..."
+    REMOTE_VERSION=""
+    if curl -sL --retry 3 --retry-delay 2 -r 0-300000 -o "$TMP_DIR/fdm_probe.deb" "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"; then
+        if ar t "$TMP_DIR/fdm_probe.deb" >/dev/null 2>&1; then
+            CONTROL_TAR=$(ar t "$TMP_DIR/fdm_probe.deb" | grep "control.tar" | head -n 1 || true)
+            if [ -n "$CONTROL_TAR" ]; then
+                ar p "$TMP_DIR/fdm_probe.deb" "$CONTROL_TAR" > "$TMP_DIR/$CONTROL_TAR" 2>/dev/null || true
+                REMOTE_VERSION=$(tar -xaf "$TMP_DIR/$CONTROL_TAR" -O ./control 2>/dev/null | grep -i '^Version:' | awk '{print $2}' || true)
+            fi
+        fi
     fi
+
+    if [ -n "$REMOTE_VERSION" ] && [ "$CURRENT_VERSION" = "$REMOTE_VERSION" ]; then
+        SKIP_DOWNLOAD=true
+        success "Free Download Manager (v${CURRENT_VERSION}) is already up to date!"
+        info "Skipping 40MB re-download. Refreshing manifests, MIME & desktop integration..."
+    fi
+fi
+
+if [ "$SKIP_DOWNLOAD" != "true" ]; then
+    info "[2/6] Extracting Free Download Manager package..."
+    if [ -n "$LOCAL_DEB" ]; then
+        info "Using local deb package: $LOCAL_DEB"
+        cp "$LOCAL_DEB" fdm.deb
+    else
+        info "Downloading official Free Download Manager package..."
+        curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+    fi
+
+    # Verify archive integrity
+    if ! ar t fdm.deb >/dev/null 2>&1; then
+        error "Downloaded package is corrupted or incomplete. Please check your internet connection and retry."
+        exit 1
+    fi
+
+    ar x fdm.deb
+    $SUDO tar -xf data.tar.* -C /
+    $SUDO chmod +x /opt/freedownloadmanager/fdm /opt/freedownloadmanager/wenativehost 2>/dev/null || true
+
+    # Save version metadata
+    CONTROL_TAR=$(ar t fdm.deb | grep "control.tar" | head -n 1 || true)
+    if [ -n "$CONTROL_TAR" ]; then
+        ar p fdm.deb "$CONTROL_TAR" > "$TMP_DIR/$CONTROL_TAR" 2>/dev/null || true
+        FDM_VER=$(tar -xaf "$TMP_DIR/$CONTROL_TAR" -O ./control 2>/dev/null | grep -i '^Version:' | awk '{print $2}' || true)
+        if [ -n "$FDM_VER" ]; then
+            echo "$FDM_VER" | $SUDO tee /opt/freedownloadmanager/.version >/dev/null
+        fi
+    fi
+else
+    info "[2/6] Skipping binary extraction (already on v${CURRENT_VERSION})..."
 fi
 
 # Create HiDPI & Wayland compatible CLI wrapper in PATH
@@ -346,7 +384,7 @@ for SYS_DIR in "${CHROMIUM_SYS_DIRS[@]}"; do
     echo "$CHROMIUM_JSON" | $SUDO tee "$SYS_DIR/org.freedownloadmanager.fdm5.cnh.json" >/dev/null 2>&1 || true
 done
 
-# 2. Native Firefox & Forks Manifest
+# 2. Native Firefox & Forks Manifests (both org.freedownloadmanager.fdm5.cnh and com.vms.fdm)
 FIREFOX_JSON='{
   "name": "org.freedownloadmanager.fdm5.cnh",
   "description": "Free Download Manager",
@@ -354,20 +392,38 @@ FIREFOX_JSON='{
   "type": "stdio",
   "allowed_extensions": [
     "fdm_ffext@freedownloadmanager.org",
-    "stream_catcher_fdm@freedownloadmanager.org"
+    "fdm_ffext2@freedownloadmanager.org",
+    "stream_catcher_fdm@freedownloadmanager.org",
+    "stream_catcher_fdm2@freedownloadmanager.org"
+  ]
+}'
+
+COM_VMS_JSON='{
+  "name": "com.vms.fdm",
+  "description": "Free Download Manager",
+  "path": "/opt/freedownloadmanager/wenativehost",
+  "type": "stdio",
+  "allowed_extensions": [
+    "fdm_ffext@freedownloadmanager.org",
+    "fdm_ffext2@freedownloadmanager.org",
+    "stream_catcher_fdm@freedownloadmanager.org",
+    "stream_catcher_fdm2@freedownloadmanager.org"
   ]
 }'
 
 for DIR in "${FIREFOX_NATIVE_DIRS[@]}"; do
     mkdir -p "$DIR" 2>/dev/null || true
     echo "$FIREFOX_JSON" > "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
-    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
+    echo "$COM_VMS_JSON" > "$DIR/com.vms.fdm.json" 2>/dev/null || true
+    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json" "$DIR/com.vms.fdm.json" 2>/dev/null || true
 done
 
 # System-wide Mozilla directories for native RPM Firefox
 $SUDO mkdir -p /usr/lib64/mozilla/native-messaging-hosts /usr/lib/mozilla/native-messaging-hosts 2>/dev/null || true
 echo "$FIREFOX_JSON" | $SUDO tee /usr/lib64/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
+echo "$COM_VMS_JSON" | $SUDO tee /usr/lib64/mozilla/native-messaging-hosts/com.vms.fdm.json >/dev/null 2>&1 || true
 echo "$FIREFOX_JSON" | $SUDO tee /usr/lib/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
+echo "$COM_VMS_JSON" | $SUDO tee /usr/lib/mozilla/native-messaging-hosts/com.vms.fdm.json >/dev/null 2>&1 || true
 
 # 3. Universal Flatpak Sandbox Bridges (Firefox & Chromium Families)
 if command -v flatpak >/dev/null 2>&1; then
@@ -395,10 +451,27 @@ EOF
   "type": "stdio",
   "allowed_extensions": [
     "fdm_ffext@freedownloadmanager.org",
-    "stream_catcher_fdm@freedownloadmanager.org"
+    "fdm_ffext2@freedownloadmanager.org",
+    "stream_catcher_fdm@freedownloadmanager.org",
+    "stream_catcher_fdm2@freedownloadmanager.org"
   ]
 }
 EOF
+            cat << EOF > "$TARGET_DIR/com.vms.fdm.json"
+{
+  "name": "com.vms.fdm",
+  "description": "Free Download Manager",
+  "path": "$BRIDGE_SCRIPT",
+  "type": "stdio",
+  "allowed_extensions": [
+    "fdm_ffext@freedownloadmanager.org",
+    "fdm_ffext2@freedownloadmanager.org",
+    "stream_catcher_fdm@freedownloadmanager.org",
+    "stream_catcher_fdm2@freedownloadmanager.org"
+  ]
+}
+EOF
+            chmod 644 "$TARGET_DIR/org.freedownloadmanager.fdm5.cnh.json" "$TARGET_DIR/com.vms.fdm.json" 2>/dev/null || true
         else
             cat << EOF > "$TARGET_DIR/org.freedownloadmanager.fdm5.cnh.json"
 {
@@ -412,8 +485,8 @@ EOF
   ]
 }
 EOF
+            chmod 644 "$TARGET_DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
         fi
-        chmod 644 "$TARGET_DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
 
         # Grant Flatpak host spawn permission to app
         flatpak override --user --talk-name=org.freedesktop.Flatpak "$APP_ID" 2>/dev/null || true
