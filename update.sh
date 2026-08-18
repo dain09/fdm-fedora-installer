@@ -151,11 +151,43 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 cd "$TMP_DIR" || exit 1
 
+FDM_MIRRORS=(
+    "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+    "https://files.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+    "https://dn3.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+)
+
+download_with_fallback() {
+    local target_file="$1"
+    local partial_probe="${2:-false}"
+    local download_success=false
+
+    for mirror in "${FDM_MIRRORS[@]}"; do
+        if [ "$partial_probe" = "true" ]; then
+            if curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused -r 0-300000 -o "$target_file" "$mirror" 2>/dev/null; then
+                download_success=true
+                break
+            fi
+        else
+            if curl -fL --retry 5 --retry-delay 2 --retry-connrefused -C - -o "$target_file" "$mirror"; then
+                download_success=true
+                break
+            else
+                warn "Download from $mirror failed or timed out. Trying fallback mirror..."
+            fi
+        fi
+    done
+
+    if [ "$download_success" != "true" ]; then
+        return 1
+    fi
+}
+
 info "Checking for upstream updates..."
 
 # Probe the first ~300KB to read the control archive version without downloading 40MB
 REMOTE_VERSION=""
-if curl -sL --retry 3 --retry-delay 2 -r 0-300000 -o "$TMP_DIR/fdm_probe.deb" "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"; then
+if download_with_fallback "$TMP_DIR/fdm_probe.deb" true; then
     if ar t "$TMP_DIR/fdm_probe.deb" >/dev/null 2>&1; then
         CONTROL_TAR=$(ar t "$TMP_DIR/fdm_probe.deb" | grep "control.tar" | head -n 1 || true)
         if [ -n "$CONTROL_TAR" ]; then
@@ -205,8 +237,11 @@ fi
 # Gracefully terminate running FDM instances before updating
 pkill -x fdm 2>/dev/null || true
 
-# Download the full official deb package with retry
-curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+# Download the full official deb package with multi-mirror fallback
+if ! download_with_fallback fdm.deb false; then
+    error "Failed to download Free Download Manager from all mirrors. Please verify your connection."
+    exit 1
+fi
 
 # Verify archive integrity
 if ! ar t fdm.deb >/dev/null 2>&1; then

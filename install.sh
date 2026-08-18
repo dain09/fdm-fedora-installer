@@ -569,6 +569,38 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 cd "$TMP_DIR" || exit 1
 
+FDM_MIRRORS=(
+    "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+    "https://files.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+    "https://dn3.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+)
+
+download_with_fallback() {
+    local target_file="$1"
+    local partial_probe="${2:-false}"
+    local download_success=false
+
+    for mirror in "${FDM_MIRRORS[@]}"; do
+        if [ "$partial_probe" = "true" ]; then
+            if curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused -r 0-300000 -o "$target_file" "$mirror" 2>/dev/null; then
+                download_success=true
+                break
+            fi
+        else
+            if curl -fL --retry 5 --retry-delay 2 --retry-connrefused -C - -o "$target_file" "$mirror"; then
+                download_success=true
+                break
+            else
+                warn "Download from $mirror failed or timed out. Trying fallback mirror..."
+            fi
+        fi
+    done
+
+    if [ "$download_success" != "true" ]; then
+        return 1
+    fi
+}
+
 # Check existing installed version to avoid redundant 40MB re-downloads
 CURRENT_VERSION=""
 if [ -f /opt/freedownloadmanager/.version ]; then
@@ -579,7 +611,7 @@ SKIP_DOWNLOAD=false
 if [ -z "$LOCAL_DEB" ] && [ "$FORCE_DOWNLOAD" != "true" ] && [ -f /opt/freedownloadmanager/fdm ] && [ -n "$CURRENT_VERSION" ]; then
     info "Checking upstream version metadata..."
     REMOTE_VERSION=""
-    if curl -sL --retry 3 --retry-delay 2 -r 0-300000 -o "$TMP_DIR/fdm_probe.deb" "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"; then
+    if download_with_fallback "$TMP_DIR/fdm_probe.deb" true; then
         if ar t "$TMP_DIR/fdm_probe.deb" >/dev/null 2>&1; then
             CONTROL_TAR=$(ar t "$TMP_DIR/fdm_probe.deb" | grep "control.tar" | head -n 1 || true)
             if [ -n "$CONTROL_TAR" ]; then
@@ -603,7 +635,10 @@ if [ "$SKIP_DOWNLOAD" != "true" ]; then
         cp "$LOCAL_DEB" fdm.deb
     else
         info "Downloading official Free Download Manager package..."
-        curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+        if ! download_with_fallback fdm.deb false; then
+            error "Failed to download Free Download Manager from all mirrors. Please verify your connection."
+            exit 1
+        fi
     fi
 
     # Verify archive integrity
