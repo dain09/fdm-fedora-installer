@@ -29,6 +29,36 @@ success() { echo -e "${GREEN}==>${NC} ${BOLD}$1${NC}"; }
 warn() { echo -e "${YELLOW}Warning:${NC} $1"; }
 error() { echo -e "${RED}Error:${NC} $1"; }
 
+send_desktop_notification() {
+    local title="$1"
+    local msg="$2"
+    local icon="${3:-freedownloadmanager}"
+
+    # 1. Direct notify-send if running inside active graphical user session
+    if [ -n "$DBUS_SESSION_BUS_ADDRESS" ] && command -v notify-send >/dev/null 2>&1; then
+        notify-send -i "$icon" -a "Free Download Manager" "$title" "$msg" 2>/dev/null || true
+        return 0
+    fi
+
+    # 2. If running under sudo or systemd service, dispatch to active logged-in graphical users
+    if command -v notify-send >/dev/null 2>&1; then
+        for user_dir in /run/user/*; do
+            [ -d "$user_dir" ] || continue
+            local uid
+            uid=$(basename "$user_dir")
+            [ "$uid" -ge 1000 ] 2>/dev/null || continue
+            local uname
+            uname=$(id -nu "$uid" 2>/dev/null || true)
+            [ -n "$uname" ] || continue
+
+            if [ -S "$user_dir/bus" ]; then
+                sudo -u "$uname" DBUS_SESSION_BUS_ADDRESS="unix:path=$user_dir/bus" \
+                    notify-send -i "$icon" -a "Free Download Manager" "$title" "$msg" 2>/dev/null || true
+            fi
+        done
+    fi
+}
+
 show_banner() {
     echo -e "${CYAN}${BOLD}"
     cat << "EOF"
@@ -337,7 +367,7 @@ show_banner
 
 # 3. Check for package manager & desktop environment
 info "[1/6] Installing system dependencies..."
-CORE_DEPS="binutils curl desktop-file-utils xdg-utils bubblewrap libxcb libxkbcommon-x11"
+CORE_DEPS="binutils curl desktop-file-utils xdg-utils bubblewrap libxcb libxkbcommon-x11 libnotify"
 
 # Add GNOME AppIndicator extension only if not strictly KDE Plasma
 if [[ "${XDG_CURRENT_DESKTOP:-}" =~ [Kk][Dd][Ee]|[Pp][Ll][Aa][Ss][Mm][Aa] ]]; then
@@ -859,3 +889,4 @@ else
 fi
 echo -e "${GREEN}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
 echo ""
+send_desktop_notification "Free Download Manager" "Installation completed successfully! (v${TARGET_VERSION})" "freedownloadmanager"

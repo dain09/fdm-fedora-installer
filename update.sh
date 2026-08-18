@@ -29,6 +29,36 @@ success() { echo -e "${GREEN}==>${NC} ${BOLD}$1${NC}"; }
 warn() { echo -e "${YELLOW}Warning:${NC} $1"; }
 error() { echo -e "${RED}Error:${NC} $1"; }
 
+send_desktop_notification() {
+    local title="$1"
+    local msg="$2"
+    local icon="${3:-freedownloadmanager}"
+
+    # 1. Direct notify-send if running inside active graphical user session
+    if [ -n "$DBUS_SESSION_BUS_ADDRESS" ] && command -v notify-send >/dev/null 2>&1; then
+        notify-send -i "$icon" -a "Free Download Manager" "$title" "$msg" 2>/dev/null || true
+        return 0
+    fi
+
+    # 2. If running under sudo or systemd service, dispatch to active logged-in graphical users
+    if command -v notify-send >/dev/null 2>&1; then
+        for user_dir in /run/user/*; do
+            [ -d "$user_dir" ] || continue
+            local uid
+            uid=$(basename "$user_dir")
+            [ "$uid" -ge 1000 ] 2>/dev/null || continue
+            local uname
+            uname=$(id -nu "$uid" 2>/dev/null || true)
+            [ -n "$uname" ] || continue
+
+            if [ -S "$user_dir/bus" ]; then
+                sudo -u "$uname" DBUS_SESSION_BUS_ADDRESS="unix:path=$user_dir/bus" \
+                    notify-send -i "$icon" -a "Free Download Manager" "$title" "$msg" 2>/dev/null || true
+            fi
+        done
+    fi
+}
+
 show_banner() {
     echo -e "${CYAN}${BOLD}"
     cat << "EOF"
@@ -261,3 +291,5 @@ elif command -v kbuildsycoca5 >/dev/null 2>&1; then
 fi
 
 success "Free Download Manager updated successfully to v${REMOTE_VERSION:-latest}!"
+send_desktop_notification "Free Download Manager" "Successfully updated to v${REMOTE_VERSION:-latest}" "freedownloadmanager"
+
