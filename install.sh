@@ -1174,4 +1174,14 @@ else
 fi
 echo -e "${GREEN}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
 echo ""
-send_desktop_notification "Free Download Manager" "Installation completed successfully! (v${TARGET_VERSION})" "freedownloadmanager"
+
+FINAL_VERSION=""
+if [ -f /opt/freedownloadmanager/.version ]; then
+    FINAL_VERSION=" (v$(cat /opt/freedownloadmanager/.version | tr -d '[:space:]'))"
+elif [ -n "$REMOTE_VERSION" ]; then
+    FINAL_VERSION=" (v$REMOTE_VERSION)"
+elif [ -n "$CURRENT_VERSION" ]; then
+    FINAL_VERSION=" (v$CURRENT_VERSION)"
+fi
+
+send_desktop_notification "Free Download Manager" "Installation completed successfully!${FINAL_VERSION}" "freedownloadmanager"
