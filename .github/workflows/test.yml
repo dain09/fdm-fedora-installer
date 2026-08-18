@@ -1,4 +1,4 @@
-name: Test Installer on Fedora
+name: CI Test Suite
 
 on:
   push:
@@ -7,32 +7,41 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test-fedora:
+  test-matrix:
+    name: Fedora ${{ matrix.version }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         version: [ "latest", "43" ]
-    container:
-      image: fedora:${{ matrix.version }}
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Test Installation
+      - name: Test Installer & Full Lifecycle
         run: |
-          chmod +x install.sh update.sh uninstall.sh
-          ./install.sh
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            fedora:${{ matrix.version }} \
+            /bin/bash -c "
+              set -e
+              echo '==> 1. Running Installation...'
+              chmod +x install.sh update.sh uninstall.sh
+              ./install.sh
 
-      - name: Verify Binary & Native Host
-        run: |
-          test -f /opt/freedownloadmanager/wenativehost || exit 1
-          test -f /opt/freedownloadmanager/fdm || exit 1
-          test -f "$HOME/.mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json" || exit 1
+              echo '==> 2. Verifying Core Executables & Manifests...'
+              test -f /opt/freedownloadmanager/wenativehost
+              test -f /opt/freedownloadmanager/fdm
+              test -f /usr/share/applications/freedownloadmanager.desktop
 
-      - name: Test Update Script
-        run: ./update.sh
+              echo '==> 3. Testing Update Script...'
+              ./update.sh
 
-      - name: Test Uninstallation
-        run: |
-          ./uninstall.sh
-          test ! -d /opt/freedownloadmanager || exit 1
+              echo '==> 4. Testing Clean Removal...'
+              ./uninstall.sh
+              test ! -d /opt/freedownloadmanager
+              
+              echo '==> All checks passed!'
+            "

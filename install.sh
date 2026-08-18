@@ -1,18 +1,32 @@
 #!/usr/bin/env bash
 set -e
 
-# Use sudo only if not running as root
-if [ "$EUID" -ne 0 ]; then
-    SUDO="sudo"
-else
-    SUDO=""
+# 1. Architecture Check
+ARCH=$(uname -m)
+if [ "$ARCH" != "x86_64" ]; then
+    echo "Error: Free Download Manager is only available for x86_64 architectures (found: $ARCH)."
+    exit 1
 fi
 
-echo "==> [1/5] Installing dependencies..."
+# 2. Determine root privileges and actual user home
+if [ "$EUID" -ne 0 ]; then
+    SUDO="sudo"
+    USER_HOME="$HOME"
+else
+    SUDO=""
+    if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+        USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    else
+        USER_HOME="$HOME"
+    fi
+fi
+
+echo "==> [1/5] Installing system dependencies..."
 $SUDO dnf install -y binutils curl desktop-file-utils xdg-utils gnome-shell-extension-appindicator libappindicator-gtk3
 
-echo "==> [2/5] Downloading and extracting Free Download Manager..."
+echo "==> [2/5] Downloading and extracting FDM (.deb)..."
 TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 cd "$TMP_DIR"
 
 curl -L -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
@@ -23,15 +37,14 @@ $SUDO chmod +x /opt/freedownloadmanager/fdm /opt/freedownloadmanager/wenativehos
 if command -v update-desktop-database >/dev/null 2>&1; then
     $SUDO update-desktop-database || true
 fi
-rm -rf "$TMP_DIR"
 
 echo "==> [3/5] Setting up Native Messaging Hosts..."
-# Chromium-based paths
+# Chromium Manifest
 HOST_DIRS=(
-    "$HOME/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts"
-    "$HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
-    "$HOME/.config/google-chrome/NativeMessagingHosts"
-    "$HOME/.config/chromium/NativeMessagingHosts"
+    "$USER_HOME/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts"
+    "$USER_HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
+    "$USER_HOME/.config/google-chrome/NativeMessagingHosts"
+    "$USER_HOME/.config/chromium/NativeMessagingHosts"
 )
 
 CHROMIUM_JSON='{
@@ -51,8 +64,8 @@ for DIR in "${HOST_DIRS[@]}"; do
     chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json"
 done
 
-# Firefox path
-FIREFOX_DIR="$HOME/.mozilla/native-messaging-hosts"
+# Firefox Manifest
+FIREFOX_DIR="$USER_HOME/.mozilla/native-messaging-hosts"
 mkdir -p "$FIREFOX_DIR"
 cat << 'EOF' > "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
 {
@@ -67,12 +80,17 @@ cat << 'EOF' > "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
 EOF
 chmod 644 "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
 
-echo "==> [4/5] Associating torrent and magnet MIME types..."
+# Fix permissions for non-root target directories if run via sudo
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    chown -R "$SUDO_USER":"$SUDO_USER" "$USER_HOME/.config" "$USER_HOME/.mozilla" 2>/dev/null || true
+fi
+
+echo "==> [4/5] Registering MIME associations..."
 xdg-mime default freedownloadmanager.desktop application/x-bittorrent 2>/dev/null || true
 xdg-mime default freedownloadmanager.desktop x-scheme-handler/magnet 2>/dev/null || true
 
-echo "==> [5/5] Removing conflicting Flatpak version if present..."
+echo "==> [5/5] Removing conflicting Flatpak version..."
 flatpak uninstall -y org.freedownloadmanager.Manager 2>/dev/null || true
 
 echo "--------------------------------------------------------"
-echo "Installation complete! Please restart your browser and session."
+echo "Installation complete! Restart your browser to activate."
