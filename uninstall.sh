@@ -6,12 +6,14 @@ if [ -t 1 ]; then
     RED='\033[0;31m'
     GREEN='\033[0;32m'
     CYAN='\033[0;36m'
+    YELLOW='\033[1;33m'
     BOLD='\033[1m'
     NC='\033[0m'
 else
     RED=''
     GREEN=''
     CYAN=''
+    YELLOW=''
     BOLD=''
     NC=''
 fi
@@ -28,19 +30,41 @@ Usage:
 
 Options:
   -h, --help       Show this help message and exit
+  -y, --yes        Automatic yes to prompts (non-interactive mode)
 
 Description:
   Completely removes Free Download Manager binaries (/opt/freedownloadmanager),
-  desktop entry, CLI symlink (/usr/local/bin/fdm), and all browser Native Messaging manifests.
+  desktop entry, CLI wrapper (/usr/local/bin/fdm), and all browser Native Messaging manifests.
 EOF
     exit 0
 }
 
-case "${1:-}" in
-    -h|--help)
-        show_help
-        ;;
-esac
+AUTO_CONFIRM=false
+
+for arg in "$@"; do
+    case "$arg" in
+        -h|--help)
+            show_help
+            ;;
+        -y|--yes|-f|--force)
+            AUTO_CONFIRM=true
+            ;;
+    esac
+done
+
+# Interactive confirmation prompt if running in interactive terminal
+if [ "$AUTO_CONFIRM" != "true" ] && [ -t 0 ]; then
+    echo -ne "${YELLOW}Are you sure you want to completely remove Free Download Manager? [y/N]: ${NC}"
+    read -r response
+    case "$response" in
+        [yY][eE][sS]|[yY])
+            ;;
+        *)
+            echo "Uninstallation cancelled."
+            exit 0
+            ;;
+    esac
+fi
 
 if [ "$EUID" -ne 0 ]; then
     SUDO="sudo"
