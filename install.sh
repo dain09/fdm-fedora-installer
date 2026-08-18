@@ -353,8 +353,38 @@ fi
 
 info "[3/6] Setting up Universal Native Messaging Hosts..."
 
-# 1. Native Chromium Manifest
-CHROMIUM_JSON='{
+# 1. Native Chromium Manifests & Universal Bridge
+for DIR in "${CHROMIUM_NATIVE_DIRS[@]}"; do
+    mkdir -p "$DIR" 2>/dev/null || true
+
+    BRIDGE_SCRIPT="$DIR/fdm_bridge.sh"
+    cat << 'EOF' > "$BRIDGE_SCRIPT"
+#!/bin/sh
+if [ -x /usr/bin/flatpak-spawn ]; then
+    exec /usr/bin/flatpak-spawn --host /opt/freedownloadmanager/wenativehost "$@"
+else
+    exec /opt/freedownloadmanager/wenativehost "$@"
+fi
+EOF
+    chmod 755 "$BRIDGE_SCRIPT" 2>/dev/null || true
+
+    cat << EOF > "$DIR/org.freedownloadmanager.fdm5.cnh.json"
+{
+  "name": "org.freedownloadmanager.fdm5.cnh",
+  "description": "Free Download Manager",
+  "path": "$BRIDGE_SCRIPT",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://ahmpjcflkgiildlgicmcieglgoilbfdp/",
+    "chrome-extension://mdfcjfioplkdchnhcpcobaheocanedjg/"
+  ]
+}
+EOF
+    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
+done
+
+# System-wide Chromium / Chrome / Edge / Vivaldi directories
+CHROMIUM_SYS_JSON='{
   "name": "org.freedownloadmanager.fdm5.cnh",
   "description": "Free Download Manager",
   "path": "/opt/freedownloadmanager/wenativehost",
@@ -365,13 +395,6 @@ CHROMIUM_JSON='{
   ]
 }'
 
-for DIR in "${CHROMIUM_NATIVE_DIRS[@]}"; do
-    mkdir -p "$DIR" 2>/dev/null || true
-    echo "$CHROMIUM_JSON" > "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
-    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
-done
-
-# System-wide Chromium / Chrome / Edge / Vivaldi directories
 CHROMIUM_SYS_DIRS=(
     "/etc/opt/chrome/native-messaging-hosts"
     "/etc/chromium/native-messaging-hosts"
@@ -381,11 +404,58 @@ CHROMIUM_SYS_DIRS=(
 )
 for SYS_DIR in "${CHROMIUM_SYS_DIRS[@]}"; do
     $SUDO mkdir -p "$SYS_DIR" 2>/dev/null || true
-    echo "$CHROMIUM_JSON" | $SUDO tee "$SYS_DIR/org.freedownloadmanager.fdm5.cnh.json" >/dev/null 2>&1 || true
+    echo "$CHROMIUM_SYS_JSON" | $SUDO tee "$SYS_DIR/org.freedownloadmanager.fdm5.cnh.json" >/dev/null 2>&1 || true
 done
 
-# 2. Native Firefox & Forks Manifests (both org.freedownloadmanager.fdm5.cnh and com.vms.fdm)
-FIREFOX_JSON='{
+# 2. Native Firefox & Forks Manifests & Universal Bridge
+for DIR in "${FIREFOX_NATIVE_DIRS[@]}"; do
+    mkdir -p "$DIR" 2>/dev/null || true
+
+    BRIDGE_SCRIPT="$DIR/fdm_bridge.sh"
+    cat << 'EOF' > "$BRIDGE_SCRIPT"
+#!/bin/sh
+if [ -x /usr/bin/flatpak-spawn ]; then
+    exec /usr/bin/flatpak-spawn --host /opt/freedownloadmanager/wenativehost "$@"
+else
+    exec /opt/freedownloadmanager/wenativehost "$@"
+fi
+EOF
+    chmod 755 "$BRIDGE_SCRIPT" 2>/dev/null || true
+
+    cat << EOF > "$DIR/org.freedownloadmanager.fdm5.cnh.json"
+{
+  "name": "org.freedownloadmanager.fdm5.cnh",
+  "description": "Free Download Manager",
+  "path": "$BRIDGE_SCRIPT",
+  "type": "stdio",
+  "allowed_extensions": [
+    "fdm_ffext@freedownloadmanager.org",
+    "fdm_ffext2@freedownloadmanager.org",
+    "stream_catcher_fdm@freedownloadmanager.org",
+    "stream_catcher_fdm2@freedownloadmanager.org"
+  ]
+}
+EOF
+
+    cat << EOF > "$DIR/com.vms.fdm.json"
+{
+  "name": "com.vms.fdm",
+  "description": "Free Download Manager",
+  "path": "$BRIDGE_SCRIPT",
+  "type": "stdio",
+  "allowed_extensions": [
+    "fdm_ffext@freedownloadmanager.org",
+    "fdm_ffext2@freedownloadmanager.org",
+    "stream_catcher_fdm@freedownloadmanager.org",
+    "stream_catcher_fdm2@freedownloadmanager.org"
+  ]
+}
+EOF
+    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json" "$DIR/com.vms.fdm.json" 2>/dev/null || true
+done
+
+# System-wide Mozilla directories for native RPM Firefox
+FIREFOX_SYS_JSON='{
   "name": "org.freedownloadmanager.fdm5.cnh",
   "description": "Free Download Manager",
   "path": "/opt/freedownloadmanager/wenativehost",
@@ -397,8 +467,7 @@ FIREFOX_JSON='{
     "stream_catcher_fdm2@freedownloadmanager.org"
   ]
 }'
-
-COM_VMS_JSON='{
+COM_VMS_SYS_JSON='{
   "name": "com.vms.fdm",
   "description": "Free Download Manager",
   "path": "/opt/freedownloadmanager/wenativehost",
@@ -410,20 +479,11 @@ COM_VMS_JSON='{
     "stream_catcher_fdm2@freedownloadmanager.org"
   ]
 }'
-
-for DIR in "${FIREFOX_NATIVE_DIRS[@]}"; do
-    mkdir -p "$DIR" 2>/dev/null || true
-    echo "$FIREFOX_JSON" > "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
-    echo "$COM_VMS_JSON" > "$DIR/com.vms.fdm.json" 2>/dev/null || true
-    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json" "$DIR/com.vms.fdm.json" 2>/dev/null || true
-done
-
-# System-wide Mozilla directories for native RPM Firefox
 $SUDO mkdir -p /usr/lib64/mozilla/native-messaging-hosts /usr/lib/mozilla/native-messaging-hosts 2>/dev/null || true
-echo "$FIREFOX_JSON" | $SUDO tee /usr/lib64/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
-echo "$COM_VMS_JSON" | $SUDO tee /usr/lib64/mozilla/native-messaging-hosts/com.vms.fdm.json >/dev/null 2>&1 || true
-echo "$FIREFOX_JSON" | $SUDO tee /usr/lib/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
-echo "$COM_VMS_JSON" | $SUDO tee /usr/lib/mozilla/native-messaging-hosts/com.vms.fdm.json >/dev/null 2>&1 || true
+echo "$FIREFOX_SYS_JSON" | $SUDO tee /usr/lib64/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
+echo "$COM_VMS_SYS_JSON" | $SUDO tee /usr/lib64/mozilla/native-messaging-hosts/com.vms.fdm.json >/dev/null 2>&1 || true
+echo "$FIREFOX_SYS_JSON" | $SUDO tee /usr/lib/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
+echo "$COM_VMS_SYS_JSON" | $SUDO tee /usr/lib/mozilla/native-messaging-hosts/com.vms.fdm.json >/dev/null 2>&1 || true
 
 # 3. Universal Flatpak Sandbox Bridges (Firefox & Chromium Families)
 if command -v flatpak >/dev/null 2>&1; then
@@ -433,12 +493,16 @@ if command -v flatpak >/dev/null 2>&1; then
         BROWSER_TYPE=$(echo "$ENTRY" | cut -d: -f3)
 
         TARGET_DIR="$USER_HOME/.var/app/$APP_ID/$REL_PATH"
-        BRIDGE_SCRIPT="$TARGET_DIR/fdm_flatpak_bridge.sh"
+        BRIDGE_SCRIPT="$TARGET_DIR/fdm_bridge.sh"
         mkdir -p "$TARGET_DIR" 2>/dev/null || true
 
         cat << 'EOF' > "$BRIDGE_SCRIPT"
 #!/bin/sh
-exec /usr/bin/flatpak-spawn --host /opt/freedownloadmanager/wenativehost "$@"
+if [ -x /usr/bin/flatpak-spawn ]; then
+    exec /usr/bin/flatpak-spawn --host /opt/freedownloadmanager/wenativehost "$@"
+else
+    exec /opt/freedownloadmanager/wenativehost "$@"
+fi
 EOF
         chmod 755 "$BRIDGE_SCRIPT" 2>/dev/null || true
 
