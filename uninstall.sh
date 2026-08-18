@@ -99,7 +99,13 @@ fi
 # Gracefully terminate running FDM instances before removal
 pkill -x fdm 2>/dev/null || true
 
-info "Removing Free Download Manager..."
+if command -v systemctl >/dev/null 2>&1; then
+    $SUDO systemctl disable --now fdm-update.timer 2>/dev/null || true
+    $SUDO rm -f /etc/systemd/system/fdm-update.service /etc/systemd/system/fdm-update.timer 2>/dev/null || true
+    $SUDO systemctl daemon-reload 2>/dev/null || true
+fi
+$SUDO rm -f /etc/profile.d/fdm-dnf-hook.sh 2>/dev/null || true
+
 $SUDO rm -rf /opt/freedownloadmanager
 $SUDO rm -f /usr/share/applications/freedownloadmanager.desktop
 $SUDO rm -f /usr/local/bin/fdm /usr/local/bin/fdm-update /usr/local/bin/fdm-doctor

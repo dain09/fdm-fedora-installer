@@ -149,14 +149,22 @@ Example diagnostic report:
 
 ## 🔄 Updating FDM
 
-To update FDM to the latest release:
+FDM updates are handled effortlessly through three convenient methods:
+
+### 1. Automatic Updates with `sudo dnf update` (Built-in Hook)
+When you run `sudo dnf update` or `dnf upgrade`, the installer's profile hook (`/etc/profile.d/fdm-dnf-hook.sh`) automatically checks upstream FDM releases right after DNF finishes updating your system packages.
+
+### 2. Automatic Daily Background Timer (`systemd`)
+The installer configures a lightweight `systemd` user timer (`fdm-update.timer`) that silently checks for upstream updates once a day (using a ~300KB probe) without consuming bandwidth.
+
+### 3. Manual On-Demand Update (CLI)
+You can manually check or update at any time:
 
 ```bash
+# Update to latest release in-place
 fdm-update
-```
 
-Or check without downloading:
-```bash
+# Check for updates without downloading
 fdm-update --check
 ```
 

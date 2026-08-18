@@ -260,7 +260,24 @@ run_doctor() {
     fi
     echo ""
 
-    # 5. Network & BitTorrent Firewall Optimization
+    # 5. Background Updates & DNF Integration
+    echo -e "${CYAN}[Automatic Updates & DNF Integration]${NC}"
+    if [ -f /etc/profile.d/fdm-dnf-hook.sh ]; then
+        echo -e "  ${GREEN}[✓]${NC} DNF Hook: active (updates FDM with sudo dnf update)"
+    else
+        echo -e "  ${YELLOW}[-]${NC} DNF Hook: inactive"
+    fi
+
+    if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet fdm-update.timer 2>/dev/null; then
+        echo -e "  ${GREEN}[✓]${NC} Systemd Auto-Update Timer: active (runs daily)"
+    elif [ -f /etc/systemd/system/fdm-update.timer ]; then
+        echo -e "  ${YELLOW}[-]${NC} Systemd Auto-Update Timer: installed (inactive)"
+    else
+        echo -e "  ${YELLOW}[-]${NC} Systemd Auto-Update Timer: not configured"
+    fi
+    echo ""
+
+    # 6. Network & BitTorrent Firewall Optimization
     echo -e "${CYAN}[Network & BitTorrent Optimization]${NC}"
     if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld 2>/dev/null; then
         echo -e "  ${GREEN}[✓]${NC} firewalld: active"
@@ -500,6 +517,60 @@ $SUDO mkdir -p /usr/share/bash-completion/completions 2>/dev/null || true
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-update
 $SUDO chmod 644 /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update 2>/dev/null || true
+
+# DNF Integration Hook (runs fdm-update alongside sudo dnf update / upgrade)
+cat << 'EOF' > "$TMP_DIR/fdm_dnf_hook.sh"
+# Free Download Manager automatic update hook for DNF
+if [ -n "$BASH_VERSION" ] || [ -n "$ZSH_VERSION" ]; then
+    dnf() {
+        command dnf "$@"
+        local exit_code=$?
+        if [ $exit_code -eq 0 ] && [[ "$*" =~ (^|[[:space:]])(update|upgrade)($|[[:space:]]) ]]; then
+            if [ -x /usr/local/bin/fdm-update ]; then
+                echo ""
+                echo -e "\033[0;36m==>\033[0m \033[1mChecking Free Download Manager updates...\033[0m"
+                /usr/local/bin/fdm-update
+            fi
+        fi
+        return $exit_code
+    }
+fi
+EOF
+$SUDO mkdir -p /etc/profile.d 2>/dev/null || true
+$SUDO cp "$TMP_DIR/fdm_dnf_hook.sh" /etc/profile.d/fdm-dnf-hook.sh
+$SUDO chmod 644 /etc/profile.d/fdm-dnf-hook.sh
+
+# Systemd Auto-Update Service & Timer (Daily silent background check)
+cat << 'EOF' > "$TMP_DIR/fdm-update.service"
+[Unit]
+Description=Free Download Manager Background Update Check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/fdm-update
+EOF
+
+cat << 'EOF' > "$TMP_DIR/fdm-update.timer"
+[Unit]
+Description=Daily Free Download Manager Update Check
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1d
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+$SUDO cp "$TMP_DIR/fdm-update.service" "$TMP_DIR/fdm-update.timer" /etc/systemd/system/ 2>/dev/null || true
+$SUDO chmod 644 /etc/systemd/system/fdm-update.service /etc/systemd/system/fdm-update.timer 2>/dev/null || true
+if command -v systemctl >/dev/null 2>&1 && systemctl is-system-running >/dev/null 2>&1; then
+    $SUDO systemctl daemon-reload 2>/dev/null || true
+    $SUDO systemctl enable --now fdm-update.timer 2>/dev/null || true
+fi
 
 # Refresh desktop database and icon caches across GNOME and KDE
 if command -v update-desktop-database >/dev/null 2>&1; then
