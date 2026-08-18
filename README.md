@@ -218,6 +218,16 @@ QT_QPA_PLATFORM=xcb fdm
 
 ---
 
+## ⚖️ Legal Disclaimer
+
+This repository and its installation scripts are an **independent, community-driven open-source project** and are **NOT affiliated, associated, authorized, endorsed by, or in any way officially connected with FreeDownloadManager.org, Softdeluxe, or Free Download Manager Ltd.**
+
+* **Trademarks:** "Free Download Manager", "FDM", and associated logos are trademarks of FreeDownloadManager.org / Softdeluxe. All other product and browser names are trademarks of their respective holders. Their use is strictly for descriptive and compatibility identification purposes (*Nominative Fair Use*).
+* **No Software Redistribution:** This project does not host, redistribute, or modify any proprietary FDM binary packages. All files are downloaded directly from the official upstream vendor servers during installation.
+* See [DISCLAIMER.md](DISCLAIMER.md) for full legal terms.
+
+---
+
 ## 🤝 Contributing
 
 Contributions, bug reports, and feature suggestions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
@@ -227,3 +237,4 @@ Contributions, bug reports, and feature suggestions are welcome! Please see [CON
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
+

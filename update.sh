@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Free Download Manager In-Place Updater for Fedora Linux
+# An unofficial, community-maintained automation suite.
+# Not affiliated with or endorsed by FreeDownloadManager.org or Softdeluxe.
+# License: MIT (See LICENSE and DISCLAIMER.md)
 set -e
 
 # Terminal Colors & Styling
