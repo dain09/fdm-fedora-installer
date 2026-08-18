@@ -795,9 +795,18 @@ COFFEE_EOF
             AUDIO_ONLY=true
             shift
             ;;
-        -q|--quality)
-            TARGET_RES="$2"
-            shift 2
+        -q*)
+            if [ "$1" = "-q" ] || [ "$1" = "--quality" ]; then
+                TARGET_RES="$2"
+                shift 2
+            else
+                TARGET_RES="${1#-q}"
+                shift 1
+            fi
+            ;;
+        --quality=*)
+            TARGET_RES="${1#--quality=}"
+            shift 1
             ;;
         -o|--output)
             DEST_DIR="$2"
@@ -839,16 +848,21 @@ fi
 
 mkdir -p "$DEST_DIR" 2>/dev/null || true
 
-# Format selection
+# Format selection & enforce single song/video download (--no-playlist)
 if [ "$AUDIO_ONLY" = "true" ]; then
-    YTDL_OPTS=(-x --audio-format mp3 --audio-quality 0)
+    YTDL_OPTS=(--no-playlist -x --audio-format mp3 --audio-quality 0)
     MODE_STR="Audio Only (High-Quality MP3)"
 elif [ -n "$TARGET_RES" ]; then
     RES_NUM=$(echo "$TARGET_RES" | tr -cd '0-9')
-    YTDL_OPTS=(-f "bestvideo[height<=${RES_NUM}]+bestaudio/best[height<=${RES_NUM}]/best")
-    MODE_STR="Video (${TARGET_RES})"
+    if [ -n "$RES_NUM" ]; then
+        YTDL_OPTS=(--no-playlist -f "bestvideo[height<=${RES_NUM}]+bestaudio/best[height<=${RES_NUM}]/best")
+        MODE_STR="Video (${RES_NUM}p)"
+    else
+        YTDL_OPTS=(--no-playlist -f "bestvideo+bestaudio/best")
+        MODE_STR="Best Available Quality (Video + Audio)"
+    fi
 else
-    YTDL_OPTS=(-f "bestvideo+bestaudio/best")
+    YTDL_OPTS=(--no-playlist -f "bestvideo+bestaudio/best")
     MODE_STR="Best Available Quality (Video + Audio)"
 fi
 
