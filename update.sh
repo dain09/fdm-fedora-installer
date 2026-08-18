@@ -428,13 +428,16 @@ if [ -z "$URL" ]; then
     exit 1
 fi
 
-# Ensure yt-dlp and nodejs are installed
+# Ensure yt-dlp, nodejs, and secretstorage are installed
 MISSING_PKGS=""
 if ! command -v yt-dlp >/dev/null 2>&1; then
     MISSING_PKGS="$MISSING_PKGS yt-dlp"
 fi
 if ! command -v node >/dev/null 2>&1; then
     MISSING_PKGS="$MISSING_PKGS nodejs"
+fi
+if ! rpm -q python3-secretstorage >/dev/null 2>&1; then
+    MISSING_PKGS="$MISSING_PKGS python3-secretstorage python3-cryptography"
 fi
 
 if [ -n "$MISSING_PKGS" ]; then
@@ -478,27 +481,36 @@ else
     MODE_STR="Best Available Quality (Video + Audio)"
 fi
 
-# Auto-detect available browser cookies on the system to bypass YouTube bot checks
+# Auto-detect available browser cookies across all supported native & Flatpak browsers
 COOKIE_OPTS=()
-COOKIE_BROWSER=""
-if find "$TARGET_HOME/.mozilla/firefox" "$TARGET_HOME/.config/mozilla/firefox" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
-    COOKIE_BROWSER="firefox"
-elif find "$TARGET_HOME/.config/google-chrome" -name "Cookies" 2>/dev/null | grep -q .; then
-    COOKIE_BROWSER="chrome"
-elif find "$TARGET_HOME/.config/chromium" -name "Cookies" 2>/dev/null | grep -q .; then
-    COOKIE_BROWSER="chromium"
-elif find "$TARGET_HOME/.config/BraveSoftware/Brave-Browser" -name "Cookies" 2>/dev/null | grep -q .; then
-    COOKIE_BROWSER="brave"
-elif find "$TARGET_HOME/.config/microsoft-edge" -name "Cookies" 2>/dev/null | grep -q .; then
-    COOKIE_BROWSER="edge"
-elif find "$TARGET_HOME/.zen" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
-    COOKIE_BROWSER="zen"
-elif find "$TARGET_HOME/.librewolf" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
-    COOKIE_BROWSER="librewolf"
-fi
-
-if [ -n "$COOKIE_BROWSER" ]; then
-    COOKIE_OPTS=(--cookies-from-browser "$COOKIE_BROWSER")
+if find "$TARGET_HOME/.mozilla/firefox" "$TARGET_HOME/.config/mozilla/firefox" "$TARGET_HOME/.var/app/org.mozilla.firefox" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser firefox)
+elif find "$TARGET_HOME/.zen" "$TARGET_HOME/.var/app/app.zen_browser.zen" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser zen)
+elif find "$TARGET_HOME/.librewolf" "$TARGET_HOME/.var/app/io.gitlab.librewolf-community" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser librewolf)
+elif find "$TARGET_HOME/.floorp" "$TARGET_HOME/.var/app/one.ablaze.floorp" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser floorp)
+elif find "$TARGET_HOME/.waterfox" "$TARGET_HOME/.var/app/net.waterfox.waterfox" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser waterfox)
+elif find "$TARGET_HOME/.mullvad" "$TARGET_HOME/.var/app/net.mullvad.MullvadBrowser" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser mullvad)
+elif find "$TARGET_HOME/.config/BraveSoftware/Brave-Origin" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser "brave:$TARGET_HOME/.config/BraveSoftware/Brave-Origin/Default")
+elif find "$TARGET_HOME/.config/BraveSoftware/Brave-Browser" "$TARGET_HOME/.var/app/com.brave.Browser" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser brave)
+elif find "$TARGET_HOME/.config/google-chrome" "$TARGET_HOME/.var/app/com.google.Chrome" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser chrome)
+elif find "$TARGET_HOME/.config/chromium" "$TARGET_HOME/.var/app/org.chromium.Chromium" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser chromium)
+elif find "$TARGET_HOME/.config/microsoft-edge" "$TARGET_HOME/.var/app/com.microsoft.Edge" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser edge)
+elif find "$TARGET_HOME/.config/vivaldi" "$TARGET_HOME/.var/app/com.vivaldi.Vivaldi" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser vivaldi)
+elif find "$TARGET_HOME/.config/opera" "$TARGET_HOME/.var/app/com.opera.Opera" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser opera)
+elif find "$TARGET_HOME/.config/thorium" "$TARGET_HOME/.var/app/io.github.alex313031.Thorium" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_OPTS=(--cookies-from-browser "chromium:$TARGET_HOME/.config/thorium/Default")
 fi
 
 echo -e "${CYAN}==>${NC} ${BOLD}Analyzing media stream metadata...${NC}"
