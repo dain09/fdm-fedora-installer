@@ -552,7 +552,10 @@ EOF
             chmod 644 "$TARGET_DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
         fi
 
-        # Grant Flatpak host spawn permission to app
+        # Grant Flatpak host spawn permission to app proactively
+        if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+            sudo -u "$SUDO_USER" flatpak override --user --talk-name=org.freedesktop.Flatpak "$APP_ID" 2>/dev/null || true
+        fi
         flatpak override --user --talk-name=org.freedesktop.Flatpak "$APP_ID" 2>/dev/null || true
     done
 fi
