@@ -61,19 +61,23 @@ jobs:
               test -f /usr/local/bin/fdm
               test -f /usr/local/bin/fdm-update
               test -f /usr/local/bin/fdm-doctor
+              test -f /usr/local/bin/fdm-dl
               test -f /usr/share/applications/freedownloadmanager.desktop
               test -f \"\$HOME/.mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
               test -f \"\$HOME/.librewolf/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
               test -f \"\$HOME/.floorp/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
 
-              echo '==> 4. Testing System Doctor Diagnosis...'
+              echo '==> 4. Testing System Doctor Diagnosis & fdm-dl CLI...'
               ./install.sh --doctor
+              /usr/local/bin/fdm-dl -h
+              /usr/local/bin/fdm-dl --coffee
 
               echo '==> 5. Testing Update Script (Check, Smart & Force)...'
               ./update.sh --check
               ./update.sh
               ./update.sh --force
               test -f /usr/local/bin/fdm
+              test -f /usr/local/bin/fdm-dl
 
               echo '==> 6. Testing Clean Removal...'
               ./uninstall.sh --yes
@@ -81,6 +85,7 @@ jobs:
               test ! -f /usr/local/bin/fdm
               test ! -f /usr/local/bin/fdm-update
               test ! -f /usr/local/bin/fdm-doctor
+              test ! -f /usr/local/bin/fdm-dl
               
               echo '==> All CI checks passed successfully!'
             "

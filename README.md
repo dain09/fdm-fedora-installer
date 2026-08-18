@@ -70,8 +70,10 @@ chmod +x install.sh update.sh uninstall.sh
   * **KDE Plasma:** Natively integrates with KDE's `StatusNotifierItem` and automatically refreshes `kbuildsycoca` application caches.
   * **Desktop Actions:** Right-click context menu in dock/taskbar with "Start Minimized in Tray" option.
 * **🧲 Default URL & MIME Handlers:** Registers FDM with `xdg-mime` to handle `application/x-bittorrent` files and `x-scheme-handler/magnet` links.
+* **🔄 Resilient Multi-Mirror Download Engine:** Built-in automatic CDN failover (`files2`, `files`, and `dn3.freedownloadmanager.org`) with automatic byte-range resumption (`-C -`) and connection retry policies to safeguard against transient ISP/TLS disconnects.
 * **⚡ Smart Bandwidth Optimization:** Both `install.sh` and `update.sh` probe upstream release metadata (~300KB) and skip redundant 40MB downloads if your system is already on the latest version.
 * **🩺 Built-in System Doctor (`--doctor`):** Comprehensive diagnostic tool to audit binary executables, browser manifests, MIME handlers, and desktop environment health.
+* **🍪 Universal Browser Cookie & Bot Bypass:** Automatically leverages active browser sessions across 20+ browsers to download age-restricted or challenge-protected media without configuration.
 
 ---
 
@@ -96,7 +98,10 @@ After running the installer, install the official FDM extension in your browser:
 | `fdm &` | Launch FDM in background |
 | `fdm --hidden` | Launch FDM silently minimized to the system tray |
 | `fdm <url>` | Pass a direct download link or magnet URI to FDM |
+| `fdm-dl` | Launch interactive paste prompt (no quotes needed for `&` URLs!) |
 | `fdm-dl <url>` | Multi-threaded CLI media downloader (YouTube, X/Twitter, TikTok, etc.) |
+| `fdm-dl -a <url>` | Download audio only in high-quality MP3 |
+| `fdm-dl -q480 <url>` | Download with target quality (supports shorthand `-q480`, `-q720`, `-q1080`, `-q2k`, `-q4k`) |
 | `fdm-update` | Check for upstream releases and update FDM in-place |
 | `fdm-update --check` | Check if a newer version is available without downloading |
 | `fdm-doctor` | Run comprehensive system integration health checks |
@@ -106,38 +111,52 @@ After running the installer, install the official FDM extension in your browser:
 
 ## 🎬 Accelerated CLI Media Downloader (`fdm-dl`)
 
-Download videos and audio directly from the terminal with 8 parallel accelerated connection chunks to `~/Downloads`, including live stream metadata probing, estimated file size, and interactive confirmation:
+Download videos and audio directly from your terminal with **8 parallel accelerated connection chunks** to `~/Downloads`, including live stream metadata probing, bitrate-based estimated file size, automatic browser cookie bypass, and interactive confirmation:
 
 ```bash
-# Interactive download with metadata preview & confirmation (4K/1080p + audio)
-fdm-dl https://www.youtube.com/watch?v=dQw4w9WgXcQ
+# 1. Interactive Paste Prompt (paste any URL safely without shell quoting issues):
+fdm-dl
 
-# Extract audio only (High-quality MP3)
+# 2. Universal Shorthand Quality Flags (480p, 720p, 1080p, 2K, 4K):
+fdm-dl -q480
+fdm-dl -q 1080p https://www.youtube.com/watch?v=dQw4w9WgXcQ
+fdm-dl -q4k https://www.youtube.com/watch?v=dQw4w9WgXcQ
+
+# 3. Audio Extraction Mode (High-Quality 320kbps MP3):
+fdm-dl -a
 fdm-dl -a https://www.youtube.com/watch?v=dQw4w9WgXcQ
 
-# Skip confirmation prompt (-y / --yes)
-fdm-dl -y https://www.youtube.com/watch?v=dQw4w9WgXcQ
-
-# Specify max resolution (e.g. 1080p, 720p)
-fdm-dl -q 1080p https://twitter.com/user/status/123456789
+# 4. Non-Interactive Instant Download (-y / --yes):
+fdm-dl -y -q1080 https://www.youtube.com/watch?v=dQw4w9WgXcQ
 ```
+
+### 🛡️ Universal Browser Cookie Detection & Anti-Bot Bypass
+`fdm-dl` automatically detects active browser sessions across **20+ browsers (Native & Flatpak)** to seamlessly bypass YouTube's *"Sign in to confirm you're not a bot"* challenges and age-restricted media:
+* **Gecko/Firefox family:** Mozilla Firefox, Zen Browser, LibreWolf, Floorp, Waterfox, Mullvad.
+* **Chromium family (with GNOME Keyring decryption):** Brave (Native & Flatpak), Google Chrome, Chromium, Microsoft Edge, Vivaldi, Opera, Thorium.
 
 **Example interactive summary card:**
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│  🎬 Free Download Manager - Media Download Summary           │
+│  🎬 Free Download Manager - Media Downloader (@dain09)       │
 ├──────────────────────────────────────────────────────────────┤
-  • Title       : Rick Astley - Never Gonna Give You Up        
-  • Source/Host : Rick Astley                                  
-  • Duration    : 3:33                                         
-  • Format/Mode : Audio Only (High-Quality MP3)                
-  • Est. Size   : 11.28 MB                                     
+  • Title       : Massive Attack - Angel                       
+  • Source/Host : Massive Attack                               
+  • Duration    : 5:23                                         
+  • Format/Mode : Video (480p)                                 
+  • Est. Size   : ~35.90 MB                                    
   • Destination : /home/dain/Downloads                         
   • Acceleration: 8 Parallel Connections                       
 └──────────────────────────────────────────────────────────────┘
 
 Proceed with accelerated download? [Y/n]
 ```
+
+### ☕ Easter Eggs
+| Option | Description |
+| :--- | :--- |
+| `fdm-dl --coffee` | Brew hot ASCII developer coffee while your 8 threads fly ☕ |
+| `fdm-dl --rickroll` | Experience the legendary internet tradition in accelerated high definition 🕺 |
 
 ---
 
