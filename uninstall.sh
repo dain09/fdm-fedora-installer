@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Free Download Manager Uninstallation Suite for Fedora Linux
+# Author: Abdallah Ibrahim (@dain09)
+# Repository: https://github.com/dain09/fdm-fedora-installer
 # An unofficial, community-maintained automation suite.
 # Not affiliated with or endorsed by FreeDownloadManager.org or Softdeluxe.
 # License: MIT (See LICENSE and DISCLAIMER.md)

@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![CI Test Suite](https://github.com/dain09/fdm-fedora-installer/actions/workflows/test.yml/badge.svg)](https://github.com/dain09/fdm-fedora-installer/actions/workflows/test.yml)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-Passing-brightgreen?logo=gnu-bash&logoColor=white)](https://www.shellcheck.net/)
+[![Author: Abdallah Ibrahim](https://img.shields.io/badge/Author-Abdallah%20Ibrahim-orange?logo=github&logoColor=white)](https://github.com/dain09)
 
 An automated, production-ready installer and updater for native **Free Download Manager (FDM)** on **Fedora Linux** (Workstation, KDE Spin, and Atomic / Silverblue / Kinoite / Bazzite).
 
@@ -264,6 +265,16 @@ This repository and its installation scripts are an **independent, community-dri
 * **Trademarks:** "Free Download Manager", "FDM", and associated logos are trademarks of FreeDownloadManager.org / Softdeluxe. All other product and browser names are trademarks of their respective holders. Their use is strictly for descriptive and compatibility identification purposes (*Nominative Fair Use*).
 * **No Software Redistribution:** This project does not host, redistribute, or modify any proprietary FDM binary packages. All files are downloaded directly from the official upstream vendor servers during installation.
 * See [DISCLAIMER.md](DISCLAIMER.md) for full legal terms.
+
+## 👤 Author & Maintainer
+
+Developed and maintained with ❤️ by **Abdallah Ibrahim** ([@dain09](https://github.com/dain09)).
+
+* **GitHub Profile:** [@dain09](https://github.com/dain09)
+* **Project Repository:** [fdm-fedora-installer](https://github.com/dain09/fdm-fedora-installer)
+* **Feedback & Issues:** [Issue Tracker](https://github.com/dain09/fdm-fedora-installer/issues)
+
+If you find this project helpful, please consider giving it a ⭐️ star on GitHub!
 
 ---
 
