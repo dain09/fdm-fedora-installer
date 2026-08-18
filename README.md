@@ -95,13 +95,31 @@ After running the installer, install the official FDM extension in your browser:
 | `fdm &` | Launch FDM in background |
 | `fdm --hidden` | Launch FDM silently minimized to the system tray |
 | `fdm <url>` | Pass a direct download link or magnet URI to FDM |
+| `fdm-video <url>` | Accelerate video downloads from YouTube, X/Twitter, TikTok, etc. via FDM |
 | `fdm-update` | Check for upstream releases and update FDM in-place |
 | `fdm-update --check` | Check if a newer version is available without downloading |
 | `fdm-doctor` | Run comprehensive system integration health checks |
+| `fdm-doctor --fix` | Instantly synchronize manifests & permissions for newly installed browsers |
 
 ---
 
-## 🩺 System Doctor Diagnosis
+## 🎬 Video Download Accelerator (`fdm-video`)
+
+Accelerate video and audio stream downloads by routing media links directly into FDM's multi-threaded download engine:
+
+```bash
+# Download best video + audio quality
+fdm-video https://www.youtube.com/watch?v=dQw4w9WgXcQ
+
+# Extract and download highest quality audio only
+fdm-video --audio-only https://www.youtube.com/watch?v=dQw4w9WgXcQ
+```
+
+*(Powered by `yt-dlp` under the hood; automatically prompted for installation if not present).*
+
+---
+
+## 🩺 System Doctor & Auto-Repair
 
 Audit your installation health at any time by running:
 
@@ -109,9 +127,9 @@ Audit your installation health at any time by running:
 fdm-doctor
 ```
 
-Or via script:
+Or instantly repair and sync manifests for any newly installed browsers:
 ```bash
-./install.sh --doctor
+fdm-doctor --fix
 ```
 
 Example diagnostic report:

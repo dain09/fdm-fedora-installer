@@ -119,8 +119,8 @@ $SUDO rm -f /etc/profile.d/fdm-dnf-hook.sh 2>/dev/null || true
 
 $SUDO rm -rf /opt/freedownloadmanager
 $SUDO rm -f /usr/share/applications/freedownloadmanager.desktop
-$SUDO rm -f /usr/local/bin/fdm /usr/local/bin/fdm-update /usr/local/bin/fdm-doctor
-$SUDO rm -f /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update /usr/share/bash-completion/completions/fdm-doctor 2>/dev/null || true
+$SUDO rm -f /usr/local/bin/fdm /usr/local/bin/fdm-update /usr/local/bin/fdm-doctor /usr/local/bin/fdm-video
+$SUDO rm -f /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update /usr/share/bash-completion/completions/fdm-doctor /usr/share/bash-completion/completions/fdm-video 2>/dev/null || true
 $SUDO rm -f /usr/share/icons/hicolor/128x128/apps/freedownloadmanager.png /usr/share/pixmaps/freedownloadmanager.png 2>/dev/null || true
 $SUDO rm -f /usr/lib64/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json /usr/lib/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json /etc/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json 2>/dev/null || true
 $SUDO rm -f /usr/lib64/mozilla/native-messaging-hosts/com.vms.fdm.json /usr/lib/mozilla/native-messaging-hosts/com.vms.fdm.json /etc/mozilla/native-messaging-hosts/com.vms.fdm.json 2>/dev/null || true
