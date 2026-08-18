@@ -2,8 +2,8 @@
 set -e
 
 echo "==> Updating Free Download Manager to the latest version..."
-# Ensure required tools
-sudo dnf install -y binutils curl
+# Ensure required tools are installed
+sudo dnf install -y binutils curl desktop-file-utils
 
 TMP_DIR=$(mktemp -d)
 cd "$TMP_DIR"
@@ -14,7 +14,12 @@ curl -L -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownload
 # Extract package and install to system root
 ar x fdm.deb
 sudo tar -xf data.tar.* -C /
-sudo update-desktop-database
+
+# Run update-desktop-database safely if available
+if command -v update-desktop-database >/dev/null 2>&1; then
+    sudo update-desktop-database || true
+fi
+
 rm -rf "$TMP_DIR"
 
 echo "Free Download Manager updated successfully!"

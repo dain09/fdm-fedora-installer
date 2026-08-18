@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-echo "==> [1/5] Downloading and extracting Free Download Manager (.deb)..."
-# Ensure binutils (ar) and curl are installed
-sudo dnf install -y binutils curl
+echo "==> [1/6] Installing core dependencies..."
+# Ensure required tools are installed
+sudo dnf install -y binutils curl desktop-file-utils
 
+echo "==> [2/6] Downloading and extracting Free Download Manager (.deb)..."
 TMP_DIR=$(mktemp -d)
 cd "$TMP_DIR"
 
@@ -14,10 +15,15 @@ curl -L -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownload
 # Extract package and install to system root
 ar x fdm.deb
 sudo tar -xf data.tar.* -C /
-sudo update-desktop-database
+
+# Run update-desktop-database safely if available
+if command -v update-desktop-database >/dev/null 2>&1; then
+    sudo update-desktop-database || true
+fi
+
 rm -rf "$TMP_DIR"
 
-echo "==> [2/5] Configuring Browser Native Messaging Hosts (Chromium & Firefox)..."
+echo "==> [3/6] Configuring Browser Native Messaging Hosts (Chromium & Firefox)..."
 # 1. Chromium-based Browsers (Brave, Chrome, Chromium)
 HOST_DIRS=(
     "$HOME/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts"
@@ -60,13 +66,13 @@ cat << 'EOF' > "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
 EOF
 chmod 644 "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
 
-echo "==> [3/5] Installing GNOME System Tray (AppIndicator) support..."
+echo "==> [4/6] Installing GNOME System Tray (AppIndicator) support..."
 sudo dnf install -y gnome-shell-extension-appindicator libappindicator-gtk3
 
-echo "==> [4/5] Removing conflicting Flatpak version if present..."
+echo "==> [5/6] Removing conflicting Flatpak version if present..."
 flatpak uninstall -y org.freedownloadmanager.Manager 2>/dev/null || true
 
-echo "==> [5/5] Registering MIME associations (Torrents & Magnet links)..."
+echo "==> [6/6] Registering MIME associations (Torrents & Magnet links)..."
 xdg-mime default freedownloadmanager.desktop application/x-bittorrent 2>/dev/null || true
 xdg-mime default freedownloadmanager.desktop x-scheme-handler/magnet 2>/dev/null || true
 
