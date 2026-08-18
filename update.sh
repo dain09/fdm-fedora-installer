@@ -303,16 +303,31 @@ NC='\033[0m'
 
 format_bytes() {
     local b="$1"
-    if [ -z "$b" ] || [ "$b" = "NA" ] || [ "$b" = "None" ]; then
-        echo "Dynamic / Unknown"
+    local dur="$2"
+    local tbr="$3"
+
+    if [ -n "$b" ] && [ "$b" != "NA" ] && [ "$b" != "None" ] && [ "$b" -gt 0 ] 2>/dev/null; then
+        awk -v b="$b" 'BEGIN {
+            if (b >= 1073741824) printf "%.2f GB\n", b / 1073741824;
+            else if (b >= 1048576) printf "%.2f MB\n", b / 1048576;
+            else if (b >= 1024) printf "%.2f KB\n", b / 1024;
+            else printf "%d B\n", b;
+        }'
         return
     fi
-    awk -v b="$b" 'BEGIN {
-        if (b >= 1073741824) printf "%.2f GB\n", b / 1073741824;
-        else if (b >= 1048576) printf "%.2f MB\n", b / 1048576;
-        else if (b >= 1024) printf "%.2f KB\n", b / 1024;
-        else printf "%d B\n", b;
-    }'
+
+    if [ -n "$dur" ] && [ "$dur" != "NA" ] && [ "$dur" != "None" ] && [ -n "$tbr" ] && [ "$tbr" != "NA" ] && [ "$tbr" != "None" ]; then
+        awk -v d="$dur" -v r="$tbr" 'BEGIN {
+            b = (d * r * 1000) / 8;
+            if (b >= 1073741824) printf "~%.2f GB\n", b / 1073741824;
+            else if (b >= 1048576) printf "~%.2f MB\n", b / 1048576;
+            else if (b >= 1024) printf "~%.2f KB\n", b / 1024;
+            else printf "~%d B\n", b;
+        }'
+        return
+    fi
+
+    echo "Dynamic / Stream"
 }
 
 show_help() {
@@ -519,7 +534,7 @@ META_RAW=$(yt-dlp "${COOKIE_OPTS[@]}" \
                   --js-runtimes node \
                   --remote-components ejs:github \
                   --no-warnings \
-                  --print "%(title)s:::%(uploader,channel)s:::%(duration_string)s:::%(filesize,filesize_approx)s" \
+                  --print "%(title)s:::%(uploader,channel)s:::%(duration_string)s:::%(filesize,filesize_approx)s:::%(duration)s:::%(tbr,vbr+abr,abr,vbr)s" \
                   "${YTDL_OPTS[@]}" \
                   "$URL" 2>/dev/null | tail -n 1 || true)
 
@@ -527,11 +542,13 @@ TITLE=$(echo "$META_RAW" | awk -F':::' '{print $1}')
 UPLOADER=$(echo "$META_RAW" | awk -F':::' '{print $2}')
 DURATION=$(echo "$META_RAW" | awk -F':::' '{print $3}')
 RAW_SIZE=$(echo "$META_RAW" | awk -F':::' '{print $4}')
+DURATION_SEC=$(echo "$META_RAW" | awk -F':::' '{print $5}')
+TOTAL_BITRATE=$(echo "$META_RAW" | awk -F':::' '{print $6}')
 
 [ -z "$TITLE" ] && TITLE="Media Download"
 [ -z "$UPLOADER" ] && UPLOADER="Unknown"
 [ -z "$DURATION" ] && DURATION="N/A"
-EST_SIZE=$(format_bytes "$RAW_SIZE")
+EST_SIZE=$(format_bytes "$RAW_SIZE" "$DURATION_SEC" "$TOTAL_BITRATE")
 
 echo ""
 echo -e "${CYAN}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
@@ -561,11 +578,13 @@ echo ""
 
 START_TIME=$(date +%s)
 
-# Execute download with custom formatted progress bar
+# Execute download with custom formatted progress bar and fragment resilience
 yt-dlp -N "$CONCURRENT" \
        "${COOKIE_OPTS[@]}" \
        --js-runtimes node \
        --remote-components ejs:github \
+       --fragment-retries 10 \
+       --skip-unavailable-fragments \
        --no-warnings \
        --progress \
        -P "$DEST_DIR" \
