@@ -77,6 +77,7 @@ CHROMIUM_NATIVE_DIRS=(
     "$USER_HOME/.config/opera/NativeMessagingHosts"
     "$USER_HOME/.config/opera-beta/NativeMessagingHosts"
     "$USER_HOME/.config/opera-developer/NativeMessagingHosts"
+    "$USER_HOME/.config/opera-gx/NativeMessagingHosts"
 )
 
 # Native Firefox-based Manifest Paths (RPM / Tarball & Forks)
@@ -86,25 +87,41 @@ FIREFOX_NATIVE_DIRS=(
     "$USER_HOME/.floorp/native-messaging-hosts"
     "$USER_HOME/.waterfox/native-messaging-hosts"
     "$USER_HOME/.zen/native-messaging-hosts"
+    "$USER_HOME/.mullvad/native-messaging-hosts"
+    "$USER_HOME/.ghostery/native-messaging-hosts"
 )
 
 # Flatpak Browser App Definitions (AppID:RelativePath:Type)
 FLATPAK_APPS=(
     "org.mozilla.firefox:.mozilla/native-messaging-hosts:firefox"
     "io.gitlab.librewolf-community:.librewolf/native-messaging-hosts:firefox"
+    "io.gitlab.librewolf-community:.mozilla/native-messaging-hosts:firefox"
     "one.ablaze.floorp:.floorp/native-messaging-hosts:firefox"
     "one.ablaze.floorp:.mozilla/native-messaging-hosts:firefox"
     "net.waterfox.waterfox:.waterfox/native-messaging-hosts:firefox"
+    "net.waterfox.waterfox:.mozilla/native-messaging-hosts:firefox"
     "app.zen_browser.zen:.zen/native-messaging-hosts:firefox"
     "app.zen_browser.zen:.mozilla/native-messaging-hosts:firefox"
+    "net.mullvad.MullvadBrowser:.mullvad/native-messaging-hosts:firefox"
+    "net.mullvad.MullvadBrowser:.mozilla/native-messaging-hosts:firefox"
     "com.brave.Browser:config/BraveSoftware/Brave-Browser/NativeMessagingHosts:chromium"
+    "com.brave.Browser:config/BraveSoftware/Brave-Origin/NativeMessagingHosts:chromium"
+    "com.brave.Browser.beta:config/BraveSoftware/Brave-Browser-Beta/NativeMessagingHosts:chromium"
+    "com.brave.Browser.nightly:config/BraveSoftware/Brave-Browser-Nightly/NativeMessagingHosts:chromium"
     "com.google.Chrome:config/google-chrome/NativeMessagingHosts:chromium"
     "com.google.ChromeDev:config/google-chrome-unstable/NativeMessagingHosts:chromium"
     "org.chromium.Chromium:config/chromium/NativeMessagingHosts:chromium"
+    "io.github.ungoogled_software.ungoogled_chromium:config/chromium/NativeMessagingHosts:chromium"
+    "io.github.alex313031.Thorium:config/thorium/NativeMessagingHosts:chromium"
+    "io.github.alex313031.Thorium:config/chromium/NativeMessagingHosts:chromium"
     "com.microsoft.Edge:config/microsoft-edge/NativeMessagingHosts:chromium"
     "com.microsoft.EdgeDev:config/microsoft-edge-dev/NativeMessagingHosts:chromium"
     "com.vivaldi.Vivaldi:config/vivaldi/NativeMessagingHosts:chromium"
+    "com.vivaldi.Vivaldi:config/vivaldi-snapshot/NativeMessagingHosts:chromium"
     "com.opera.Opera:config/opera/NativeMessagingHosts:chromium"
+    "com.opera.OperaBeta:config/opera-beta/NativeMessagingHosts:chromium"
+    "com.opera.OperaDeveloper:config/opera-developer/NativeMessagingHosts:chromium"
+    "com.opera.OperaGX:config/opera-gx/NativeMessagingHosts:chromium"
 )
 
 show_help() {
@@ -544,9 +561,11 @@ CHROMIUM_SYS_JSON='{
 CHROMIUM_SYS_DIRS=(
     "/etc/opt/chrome/native-messaging-hosts"
     "/etc/chromium/native-messaging-hosts"
+    "/etc/opt/brave/native-messaging-hosts"
     "/etc/opt/edge/native-messaging-hosts"
     "/etc/vivaldi/native-messaging-hosts"
     "/etc/opera/native-messaging-hosts"
+    "/etc/thorium/native-messaging-hosts"
 )
 for SYS_DIR in "${CHROMIUM_SYS_DIRS[@]}"; do
     $SUDO mkdir -p "$SYS_DIR" 2>/dev/null || true
@@ -600,7 +619,7 @@ EOF
     chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json" "$DIR/com.vms.fdm.json" 2>/dev/null || true
 done
 
-# System-wide Mozilla directories for native RPM Firefox
+# System-wide Mozilla directories for native RPM Firefox & forks
 FIREFOX_SYS_JSON='{
   "name": "org.freedownloadmanager.fdm5.cnh",
   "description": "Free Download Manager",
@@ -625,11 +644,13 @@ COM_VMS_SYS_JSON='{
     "stream_catcher_fdm2@freedownloadmanager.org"
   ]
 }'
-$SUDO mkdir -p /usr/lib64/mozilla/native-messaging-hosts /usr/lib/mozilla/native-messaging-hosts 2>/dev/null || true
+$SUDO mkdir -p /usr/lib64/mozilla/native-messaging-hosts /usr/lib/mozilla/native-messaging-hosts /etc/mozilla/native-messaging-hosts 2>/dev/null || true
 echo "$FIREFOX_SYS_JSON" | $SUDO tee /usr/lib64/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
 echo "$COM_VMS_SYS_JSON" | $SUDO tee /usr/lib64/mozilla/native-messaging-hosts/com.vms.fdm.json >/dev/null 2>&1 || true
 echo "$FIREFOX_SYS_JSON" | $SUDO tee /usr/lib/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
 echo "$COM_VMS_SYS_JSON" | $SUDO tee /usr/lib/mozilla/native-messaging-hosts/com.vms.fdm.json >/dev/null 2>&1 || true
+echo "$FIREFOX_SYS_JSON" | $SUDO tee /etc/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
+echo "$COM_VMS_SYS_JSON" | $SUDO tee /etc/mozilla/native-messaging-hosts/com.vms.fdm.json >/dev/null 2>&1 || true
 
 # 3. Universal Flatpak Sandbox Bridges (Firefox & Chromium Families)
 if command -v flatpak >/dev/null 2>&1; then
