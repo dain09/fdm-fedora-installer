@@ -1,0 +1,46 @@
+name: Bug Report
+description: Report an issue or bug with the FDM Fedora Installer
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: input
+    id: fedora_version
+    attributes:
+      label: Fedora Version & Edition
+      description: What version and spin of Fedora are you running?
+      placeholder: e.g. Fedora 43 Workstation (GNOME) / Silverblue
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser(s) tested
+      multiple: true
+      options:
+        - Google Chrome
+        - Brave Browser
+        - Chromium
+        - Mozilla Firefox
+        - Microsoft Edge
+        - Vivaldi
+        - Opera
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the problem is.
+    validations:
+      required: true
+  - type: textarea
+    id: terminal_output
+    attributes:
+      label: Terminal Output / Error Logs
+      description: Paste any terminal output or error messages if applicable.
+      render: shell

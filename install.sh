@@ -21,30 +21,45 @@ else
     fi
 fi
 
-echo "==> [1/5] Installing system dependencies..."
-$SUDO dnf install -y binutils curl desktop-file-utils xdg-utils gnome-shell-extension-appindicator libappindicator-gtk3
+# 3. Check for package manager (Fedora Workstation vs Fedora Atomic/Silverblue)
+echo "==> [1/6] Installing system dependencies..."
+if command -v dnf >/dev/null 2>&1; then
+    $SUDO dnf install -y binutils curl desktop-file-utils xdg-utils gnome-shell-extension-appindicator libappindicator-gtk3
+elif command -v rpm-ostree >/dev/null 2>&1; then
+    echo "Note: Fedora Atomic (Silverblue/Kinoite/Bazzite) detected."
+    echo "Ensure required dependencies are layered or present."
+else
+    echo "Warning: Neither dnf nor rpm-ostree found. Continuing with extraction..."
+fi
 
-echo "==> [2/5] Downloading and extracting FDM (.deb)..."
+echo "==> [2/6] Downloading and extracting FDM (.deb)..."
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 cd "$TMP_DIR"
 
-curl -L -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
 ar x fdm.deb
 $SUDO tar -xf data.tar.* -C /
 $SUDO chmod +x /opt/freedownloadmanager/fdm /opt/freedownloadmanager/wenativehost 2>/dev/null || true
+
+# Create symlink in PATH
+$SUDO ln -sf /opt/freedownloadmanager/fdm /usr/local/bin/fdm
 
 if command -v update-desktop-database >/dev/null 2>&1; then
     $SUDO update-desktop-database || true
 fi
 
-echo "==> [3/5] Setting up Native Messaging Hosts..."
-# Chromium Manifest
+echo "==> [3/6] Setting up Native Messaging Hosts..."
+# Chromium-based Manifests
 HOST_DIRS=(
     "$USER_HOME/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts"
     "$USER_HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
     "$USER_HOME/.config/google-chrome/NativeMessagingHosts"
     "$USER_HOME/.config/chromium/NativeMessagingHosts"
+    "$USER_HOME/.config/microsoft-edge/NativeMessagingHosts"
+    "$USER_HOME/.config/microsoft-edge-dev/NativeMessagingHosts"
+    "$USER_HOME/.config/vivaldi/NativeMessagingHosts"
+    "$USER_HOME/.config/opera/NativeMessagingHosts"
 )
 
 CHROMIUM_JSON='{
@@ -85,12 +100,17 @@ if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
     chown -R "$SUDO_USER":"$SUDO_USER" "$USER_HOME/.config" "$USER_HOME/.mozilla" 2>/dev/null || true
 fi
 
-echo "==> [4/5] Registering MIME associations..."
+echo "==> [4/6] Registering MIME associations..."
 xdg-mime default freedownloadmanager.desktop application/x-bittorrent 2>/dev/null || true
 xdg-mime default freedownloadmanager.desktop x-scheme-handler/magnet 2>/dev/null || true
 
-echo "==> [5/5] Removing conflicting Flatpak version..."
-flatpak uninstall -y org.freedownloadmanager.Manager 2>/dev/null || true
+echo "==> [5/6] Removing conflicting Flatpak version if present..."
+if command -v flatpak >/dev/null 2>&1; then
+    flatpak uninstall -y org.freedownloadmanager.Manager 2>/dev/null || true
+fi
 
+echo "==> [6/6] Installation complete!"
 echo "--------------------------------------------------------"
-echo "Installation complete! Restart your browser to activate."
+echo "Free Download Manager has been installed successfully."
+echo "You can launch it from your applications menu or type 'fdm' in your terminal."
+echo "Please restart your browser to activate the extension."

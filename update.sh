@@ -16,20 +16,24 @@ else
 fi
 
 echo "==> Updating Free Download Manager to the latest version..."
-# Ensure required tools are installed
-$SUDO dnf install -y binutils curl desktop-file-utils
+if command -v dnf >/dev/null 2>&1; then
+    $SUDO dnf install -y binutils curl desktop-file-utils
+fi
 
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 cd "$TMP_DIR"
 
-# Download the official deb package
-curl -L -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+# Download the official deb package with retry
+curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
 
 # Extract package and install to system root
 ar x fdm.deb
 $SUDO tar -xf data.tar.* -C /
 $SUDO chmod +x /opt/freedownloadmanager/fdm /opt/freedownloadmanager/wenativehost 2>/dev/null || true
+
+# Ensure symlink in PATH exists
+$SUDO ln -sf /opt/freedownloadmanager/fdm /usr/local/bin/fdm
 
 # Run update-desktop-database safely if available
 if command -v update-desktop-database >/dev/null 2>&1; then

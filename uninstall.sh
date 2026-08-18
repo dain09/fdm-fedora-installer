@@ -16,6 +16,7 @@ fi
 echo "==> Removing Free Download Manager..."
 $SUDO rm -rf /opt/freedownloadmanager
 $SUDO rm -f /usr/share/applications/freedownloadmanager.desktop
+$SUDO rm -f /usr/local/bin/fdm
 $SUDO find /etc -name "*freedownloadmanager*.json" -delete 2>/dev/null || true
 
 find "$USER_HOME/.config" "$USER_HOME/.mozilla" -name "*freedownloadmanager*.json" -delete 2>/dev/null || true

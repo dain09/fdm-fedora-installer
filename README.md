@@ -2,13 +2,13 @@
 
 [![Fedora](https://img.shields.io/badge/Fedora-Supported-blue?logo=fedora&logoColor=white)](https://getfedora.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Test Installer on Fedora](https://github.com/dain09/fdm-fedora-installer/actions/workflows/test.yml/badge.svg)](https://github.com/dain09/fdm-fedora-installer/actions/workflows/test.yml)
+[![CI Test Suite](https://github.com/dain09/fdm-fedora-installer/actions/workflows/test.yml/badge.svg)](https://github.com/dain09/fdm-fedora-installer/actions/workflows/test.yml)
 
 If you've ever tried using **Free Download Manager (FDM)** on Fedora via Flatpak, you probably ran into the same common issues:
 1. **Broken Browser Integration:** The browser extension fails to communicate with the app due to sandbox isolation (`Native Messaging Host` errors).
 2. **Missing Tray Icon:** The app closes completely instead of staying quietly in the background when minimized.
 
-This repository provides an automated installation script that extracts the official native build directly to `/opt`, sets up **Native Messaging** hosts for all major browsers (Chromium-based & Firefox), configures GNOME tray support, and registers torrent/magnet URL handlers.
+This repository provides an automated installation script that extracts the official native build directly to `/opt`, sets up **Native Messaging** hosts across all major browsers, configures GNOME tray support, creates a terminal command symlink, and registers torrent/magnet URL handlers.
 
 ---
 
@@ -37,10 +37,13 @@ chmod +x install.sh
 ## 🛠️ What the Script Does
 
 * **📦 Native Extraction:** Extracts the official `.deb` binaries directly to `/opt/freedownloadmanager` without requiring `dpkg`/`apt`.
-* **🌐 Full Browser Integration:** Configures Native Messaging manifests (`org.freedownloadmanager.fdm5.cnh.json`) across:
-  * **Brave Browser** & **Brave Origin**
+* **🌐 Universal Browser Integration:** Configures Native Messaging manifests (`org.freedownloadmanager.fdm5.cnh.json`) across:
   * **Google Chrome** & **Chromium**
+  * **Brave Browser** & **Brave Origin**
+  * **Microsoft Edge** & **Edge Dev**
+  * **Vivaldi** & **Opera**
   * **Mozilla Firefox** (`fdm_ffext@freedownloadmanager.org`)
+* **💻 Command-Line Interface (CLI):** Creates a symlink `/usr/local/bin/fdm` so you can launch FDM directly from terminal (e.g., `fdm <url>`).
 * **🧩 GNOME AppIndicator Support:** Installs `gnome-shell-extension-appindicator` and `libappindicator-gtk3` so FDM can minimize to the top bar properly.
 * **🧲 Default Torrent & Magnet Handler:** Registers FDM with `xdg-mime` to open `.torrent` files and `magnet:` links automatically.
 * **🧹 Cleans Up Conflicts:** Removes lingering Flatpak background processes and conflicting installations.
@@ -50,11 +53,28 @@ chmod +x install.sh
 ## 🚀 After Running the Script
 
 1. **Install the Browser Extension:**
-   * **Chrome / Brave / Chromium:** Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/free-download-manager-chr/ahmpjcflkgiildlgicmcieglgoilbfdp).
+   * **Chrome / Brave / Edge / Vivaldi / Opera:** Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/free-download-manager-chr/ahmpjcflkgiildlgicmcieglgoilbfdp).
    * **Mozilla Firefox:** Install from [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/free-download-manager-addon/).
-2. **Launch FDM** from your application menu.
+2. **Launch FDM** from your application menu or run `fdm` in terminal.
 3. **Log out and log back in** (or restart GNOME Shell) to enable the top-bar tray icon.
 4. Download any file or click a magnet link — FDM will catch it instantly!
+
+---
+
+## 💻 CLI Usage
+
+You can launch FDM or send download links directly from your terminal:
+
+```bash
+# Launch FDM in background
+fdm &
+
+# Download a direct file link
+fdm https://example.com/file.zip
+
+# Open a magnet link
+fdm "magnet:?xt=urn:btih:..."
+```
 
 ---
 
@@ -75,7 +95,7 @@ Or run locally if cloned:
 
 ## 🗑️ Uninstallation
 
-To completely remove Free Download Manager, its desktop entry, and all browser manifests:
+To completely remove Free Download Manager, its desktop entry, CLI symlink, and all browser manifests:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/uninstall.sh)"
@@ -85,6 +105,36 @@ Or run locally if cloned:
 ```bash
 ./uninstall.sh
 ```
+
+---
+
+## 🔧 Troubleshooting
+
+<details>
+<summary><b>1. System Tray Icon doesn't appear after login</b></summary>
+
+Make sure the AppIndicator extension is enabled in GNOME:
+```bash
+gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com
+```
+Then restart your session or press `Alt + F2`, type `r` (on X11), and press Enter.
+</details>
+
+<details>
+<summary><b>2. Fedora Silverblue / Atomic Desktops (Kinoite, Bazzite)</b></summary>
+
+On immutable Fedora desktops, system packages must be layered using `rpm-ostree`:
+```bash
+rpm-ostree install binutils curl desktop-file-utils xdg-utils gnome-shell-extension-appindicator libappindicator-gtk3
+```
+After layering and rebooting, run the installer one-liner as usual.
+</details>
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! Check out our [Contributing Guidelines](CONTRIBUTING.md).
 
 ---
 

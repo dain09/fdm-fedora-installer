@@ -31,17 +31,21 @@ jobs:
               chmod +x install.sh update.sh uninstall.sh
               ./install.sh
 
-              echo '==> 2. Verifying Core Executables & Manifests...'
+              echo '==> 2. Verifying Core Executables, Symlinks & Manifests...'
               test -f /opt/freedownloadmanager/wenativehost
               test -f /opt/freedownloadmanager/fdm
+              test -L /usr/local/bin/fdm
               test -f /usr/share/applications/freedownloadmanager.desktop
+              test -f \"\$HOME/.mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
 
               echo '==> 3. Testing Update Script...'
               ./update.sh
+              test -L /usr/local/bin/fdm
 
               echo '==> 4. Testing Clean Removal...'
               ./uninstall.sh
               test ! -d /opt/freedownloadmanager
+              test ! -L /usr/local/bin/fdm
               
               echo '==> All checks passed!'
             "
