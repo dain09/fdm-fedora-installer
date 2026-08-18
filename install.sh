@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 set -e
 
+# Use sudo only if not running as root
+if [ "$EUID" -ne 0 ]; then
+    SUDO="sudo"
+else
+    SUDO=""
+fi
+
 echo "==> [1/5] Installing dependencies..."
-sudo dnf install -y binutils curl desktop-file-utils xdg-utils gnome-shell-extension-appindicator libappindicator-gtk3
+$SUDO dnf install -y binutils curl desktop-file-utils xdg-utils gnome-shell-extension-appindicator libappindicator-gtk3
 
 echo "==> [2/5] Downloading and extracting Free Download Manager..."
 TMP_DIR=$(mktemp -d)
@@ -10,10 +17,11 @@ cd "$TMP_DIR"
 
 curl -L -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
 ar x fdm.deb
-sudo tar -xf data.tar.* -C /
+$SUDO tar -xf data.tar.* -C /
+$SUDO chmod +x /opt/freedownloadmanager/fdm /opt/freedownloadmanager/wenativehost 2>/dev/null || true
 
 if command -v update-desktop-database >/dev/null 2>&1; then
-    sudo update-desktop-database || true
+    $SUDO update-desktop-database || true
 fi
 rm -rf "$TMP_DIR"
 

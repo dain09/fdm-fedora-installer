@@ -18,13 +18,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Installer
+      - name: Test Installation
         run: |
-          chmod +x install.sh
+          chmod +x install.sh update.sh uninstall.sh
           ./install.sh
 
-      - name: Verify Installation Files
+      - name: Verify Binary & Native Host
         run: |
           test -f /opt/freedownloadmanager/wenativehost || exit 1
           test -f /opt/freedownloadmanager/fdm || exit 1
-          echo "Installation verified successfully!"
+          test -f "$HOME/.mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json" || exit 1
+
+      - name: Test Update Script
+        run: ./update.sh
+
+      - name: Test Uninstallation
+        run: |
+          ./uninstall.sh
+          test ! -d /opt/freedownloadmanager || exit 1
