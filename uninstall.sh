@@ -20,6 +20,7 @@ fi
 
 info() { echo -e "${CYAN}==>${NC} ${BOLD}$1${NC}"; }
 success() { echo -e "${GREEN}==>${NC} ${BOLD}$1${NC}"; }
+error() { echo -e "${RED}Error:${NC} $1"; }
 
 show_help() {
     cat << EOF
