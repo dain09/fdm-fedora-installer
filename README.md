@@ -37,12 +37,12 @@ chmod +x install.sh
 ## 🛠️ What the Script Does
 
 * **📦 Native Extraction & Integrity Check:** Verifies and extracts the official `.deb` binaries directly to `/opt/freedownloadmanager` without requiring `dpkg`/`apt`.
-* **🌐 Universal Browser Integration:** Configures Native Messaging manifests (`org.freedownloadmanager.fdm5.cnh.json`) across:
-  * **Google Chrome** & **Chromium**
-  * **Brave Browser** & **Brave Origin**
-  * **Microsoft Edge** & **Edge Dev**
-  * **Vivaldi** & **Opera**
-  * **Mozilla Firefox**, **LibreWolf**, **Floorp** & **Waterfox** (`fdm_ffext@freedownloadmanager.org`)
+* **🌐 Universal Browser Integration (Native & Flatpak):** Configures Native Messaging manifests (`org.freedownloadmanager.fdm5.cnh.json`) and automated sandbox bridges across:
+  * **Google Chrome**, **Chromium**, & **Unstable/Dev** (Native & Flatpak)
+  * **Brave Browser** & **Brave Origin** (Native & Flatpak)
+  * **Microsoft Edge** & **Edge Dev** (Native & Flatpak)
+  * **Vivaldi** & **Opera** (Native & Flatpak)
+  * **Mozilla Firefox**, **LibreWolf**, **Floorp**, **Waterfox** & **Zen Browser** (Native & Flatpak)
 * **💻 Command-Line Interface (CLI):** Creates a wrapper `/usr/local/bin/fdm` with automatic HiDPI scaling so you can launch FDM directly from terminal (e.g., `fdm <url>`).
 * **🧩 GNOME & KDE Plasma Tray Support:** Installs AppIndicator support for GNOME and integrates seamlessly with KDE Plasma's native Qt system tray (`StatusNotifierItem`).
 * **🧲 Default Torrent & Magnet Handler:** Registers FDM with `xdg-mime` to open `.torrent` files and `magnet:` links automatically.

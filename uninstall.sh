@@ -89,8 +89,8 @@ $SUDO rm -f /usr/local/bin/fdm
 $SUDO rm -f /usr/lib64/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json /usr/lib/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json 2>/dev/null || true
 $SUDO find /etc -name "*freedownloadmanager*.json" -delete 2>/dev/null || true
 
-find "$USER_HOME/.config" "$USER_HOME/.mozilla" "$USER_HOME/.librewolf" "$USER_HOME/.floorp" "$USER_HOME/.waterfox" "$USER_HOME/.var/app/org.mozilla.firefox" -name "*freedownloadmanager*.json" -delete 2>/dev/null || true
-rm -f "$USER_HOME/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts/fdm_flatpak_bridge.sh" 2>/dev/null || true
+find "$USER_HOME/.config" "$USER_HOME/.mozilla" "$USER_HOME/.librewolf" "$USER_HOME/.floorp" "$USER_HOME/.waterfox" "$USER_HOME/.zen" "$USER_HOME/.var/app" -name "*freedownloadmanager*.json" -delete 2>/dev/null || true
+find "$USER_HOME/.var/app" -name "fdm_flatpak_bridge.sh" -delete 2>/dev/null || true
 
 if command -v update-desktop-database >/dev/null 2>&1; then
     $SUDO update-desktop-database || true

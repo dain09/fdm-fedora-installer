@@ -43,24 +43,52 @@ else
     fi
 fi
 
-# Chromium-based Manifest Paths
-CHROMIUM_HOST_DIRS=(
+# Native Chromium-based Manifest Paths (RPM / Tarball)
+CHROMIUM_NATIVE_DIRS=(
     "$USER_HOME/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts"
     "$USER_HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
+    "$USER_HOME/.config/BraveSoftware/Brave-Browser-Beta/NativeMessagingHosts"
+    "$USER_HOME/.config/BraveSoftware/Brave-Browser-Nightly/NativeMessagingHosts"
     "$USER_HOME/.config/google-chrome/NativeMessagingHosts"
+    "$USER_HOME/.config/google-chrome-beta/NativeMessagingHosts"
+    "$USER_HOME/.config/google-chrome-unstable/NativeMessagingHosts"
     "$USER_HOME/.config/chromium/NativeMessagingHosts"
     "$USER_HOME/.config/microsoft-edge/NativeMessagingHosts"
+    "$USER_HOME/.config/microsoft-edge-beta/NativeMessagingHosts"
     "$USER_HOME/.config/microsoft-edge-dev/NativeMessagingHosts"
     "$USER_HOME/.config/vivaldi/NativeMessagingHosts"
+    "$USER_HOME/.config/vivaldi-snapshot/NativeMessagingHosts"
     "$USER_HOME/.config/opera/NativeMessagingHosts"
+    "$USER_HOME/.config/opera-beta/NativeMessagingHosts"
+    "$USER_HOME/.config/opera-developer/NativeMessagingHosts"
 )
 
-# Firefox-based Manifest Paths (Native RPM / Tarball & Forks)
-FIREFOX_HOST_DIRS=(
+# Native Firefox-based Manifest Paths (RPM / Tarball & Forks)
+FIREFOX_NATIVE_DIRS=(
     "$USER_HOME/.mozilla/native-messaging-hosts"
     "$USER_HOME/.librewolf/native-messaging-hosts"
     "$USER_HOME/.floorp/native-messaging-hosts"
     "$USER_HOME/.waterfox/native-messaging-hosts"
+    "$USER_HOME/.zen/native-messaging-hosts"
+)
+
+# Flatpak Browser App Definitions (AppID:RelativePath:Type)
+FLATPAK_APPS=(
+    "org.mozilla.firefox:.mozilla/native-messaging-hosts:firefox"
+    "io.gitlab.librewolf-community:.librewolf/native-messaging-hosts:firefox"
+    "one.ablaze.floorp:.floorp/native-messaging-hosts:firefox"
+    "one.ablaze.floorp:.mozilla/native-messaging-hosts:firefox"
+    "net.waterfox.waterfox:.waterfox/native-messaging-hosts:firefox"
+    "app.zen_browser.zen:.zen/native-messaging-hosts:firefox"
+    "app.zen_browser.zen:.mozilla/native-messaging-hosts:firefox"
+    "com.brave.Browser:config/BraveSoftware/Brave-Browser/NativeMessagingHosts:chromium"
+    "com.google.Chrome:config/google-chrome/NativeMessagingHosts:chromium"
+    "com.google.ChromeDev:config/google-chrome-unstable/NativeMessagingHosts:chromium"
+    "org.chromium.Chromium:config/chromium/NativeMessagingHosts:chromium"
+    "com.microsoft.Edge:config/microsoft-edge/NativeMessagingHosts:chromium"
+    "com.microsoft.EdgeDev:config/microsoft-edge-dev/NativeMessagingHosts:chromium"
+    "com.vivaldi.Vivaldi:config/vivaldi/NativeMessagingHosts:chromium"
+    "com.opera.Opera:config/opera/NativeMessagingHosts:chromium"
 )
 
 show_help() {
@@ -79,9 +107,9 @@ Arguments:
 
 Description:
   Installs Free Download Manager native binaries directly to /opt/freedownloadmanager,
-  configures browser Native Messaging Hosts across Chromium and Firefox browsers
-  (including Flatpak Firefox bridge), registers MIME handlers for torrent/magnet links,
-  and sets up desktop integration for GNOME, KDE Plasma, and other environments.
+  configures browser Native Messaging Hosts across all Chromium & Firefox browsers
+  (supporting Native RPM, Tarball, and Flatpak installations), registers MIME handlers
+  for torrent/magnet links, and sets up desktop integration for GNOME & KDE Plasma.
 EOF
     exit 0
 }
@@ -142,29 +170,29 @@ run_doctor() {
     echo ""
 
     # 3. Browser Manifests
-    echo -e "${CYAN}[Browser Native Messaging Manifests]${NC}"
-    for DIR in "${CHROMIUM_HOST_DIRS[@]}"; do
-        BROWSER_NAME=$(basename "$(dirname "$DIR")")
-        if [ -f "$DIR/org.freedownloadmanager.fdm5.cnh.json" ]; then
-            echo -e "  ${GREEN}[✓]${NC} $BROWSER_NAME: configured"
-        else
-            echo -e "  ${YELLOW}[-]${NC} $BROWSER_NAME: not present"
-        fi
-    done
-
-    for DIR in "${FIREFOX_HOST_DIRS[@]}"; do
+    echo -e "${CYAN}[Browser Native Messaging Manifests (Native & Flatpak)]${NC}"
+    for DIR in "${CHROMIUM_NATIVE_DIRS[@]}"; do
         BROWSER_NAME=$(basename "$(dirname "$DIR")")
         if [ -f "$DIR/org.freedownloadmanager.fdm5.cnh.json" ]; then
             echo -e "  ${GREEN}[✓]${NC} $BROWSER_NAME (Native): configured"
-        else
-            echo -e "  ${YELLOW}[-]${NC} $BROWSER_NAME (Native): not present"
         fi
     done
 
-    # Flatpak Firefox check
-    if [ -f "$USER_HOME/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json" ]; then
-        echo -e "  ${GREEN}[✓]${NC} Flatpak Firefox (org.mozilla.firefox): configured via flatpak-spawn bridge"
-    fi
+    for DIR in "${FIREFOX_NATIVE_DIRS[@]}"; do
+        BROWSER_NAME=$(basename "$(dirname "$DIR")")
+        if [ -f "$DIR/org.freedownloadmanager.fdm5.cnh.json" ]; then
+            echo -e "  ${GREEN}[✓]${NC} $BROWSER_NAME (Native): configured"
+        fi
+    done
+
+    for ENTRY in "${FLATPAK_APPS[@]}"; do
+        APP_ID=$(echo "$ENTRY" | cut -d: -f1)
+        REL_PATH=$(echo "$ENTRY" | cut -d: -f2)
+        TARGET_FILE="$USER_HOME/.var/app/$APP_ID/$REL_PATH/org.freedownloadmanager.fdm5.cnh.json"
+        if [ -f "$TARGET_FILE" ]; then
+            echo -e "  ${GREEN}[✓]${NC} $APP_ID (Flatpak Bridge): configured"
+        fi
+    done
     echo ""
 
     # 4. Desktop Environment & System Tray
@@ -285,8 +313,9 @@ elif command -v kbuildsycoca5 >/dev/null 2>&1; then
     kbuildsycoca5 --noincremental 2>/dev/null || true
 fi
 
-info "[3/6] Setting up Native Messaging Hosts..."
-# 1. Chromium-based manifest
+info "[3/6] Setting up Universal Native Messaging Hosts..."
+
+# 1. Native Chromium Manifest
 CHROMIUM_JSON='{
   "name": "org.freedownloadmanager.fdm5.cnh",
   "description": "Free Download Manager",
@@ -298,13 +327,26 @@ CHROMIUM_JSON='{
   ]
 }'
 
-for DIR in "${CHROMIUM_HOST_DIRS[@]}"; do
-    mkdir -p "$DIR"
-    echo "$CHROMIUM_JSON" > "$DIR/org.freedownloadmanager.fdm5.cnh.json"
-    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json"
+for DIR in "${CHROMIUM_NATIVE_DIRS[@]}"; do
+    mkdir -p "$DIR" 2>/dev/null || true
+    echo "$CHROMIUM_JSON" > "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
+    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
 done
 
-# 2. Firefox-based manifest (Native RPM & Forks)
+# System-wide Chromium / Chrome / Edge / Vivaldi directories
+CHROMIUM_SYS_DIRS=(
+    "/etc/opt/chrome/native-messaging-hosts"
+    "/etc/chromium/native-messaging-hosts"
+    "/etc/opt/edge/native-messaging-hosts"
+    "/etc/vivaldi/native-messaging-hosts"
+    "/etc/opera/native-messaging-hosts"
+)
+for SYS_DIR in "${CHROMIUM_SYS_DIRS[@]}"; do
+    $SUDO mkdir -p "$SYS_DIR" 2>/dev/null || true
+    echo "$CHROMIUM_JSON" | $SUDO tee "$SYS_DIR/org.freedownloadmanager.fdm5.cnh.json" >/dev/null 2>&1 || true
+done
+
+# 2. Native Firefox & Forks Manifest
 FIREFOX_JSON='{
   "name": "org.freedownloadmanager.fdm5.cnh",
   "description": "Free Download Manager",
@@ -316,10 +358,10 @@ FIREFOX_JSON='{
   ]
 }'
 
-for DIR in "${FIREFOX_HOST_DIRS[@]}"; do
-    mkdir -p "$DIR"
-    echo "$FIREFOX_JSON" > "$DIR/org.freedownloadmanager.fdm5.cnh.json"
-    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json"
+for DIR in "${FIREFOX_NATIVE_DIRS[@]}"; do
+    mkdir -p "$DIR" 2>/dev/null || true
+    echo "$FIREFOX_JSON" > "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
+    chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
 done
 
 # System-wide Mozilla directories for native RPM Firefox
@@ -327,20 +369,29 @@ $SUDO mkdir -p /usr/lib64/mozilla/native-messaging-hosts /usr/lib/mozilla/native
 echo "$FIREFOX_JSON" | $SUDO tee /usr/lib64/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
 echo "$FIREFOX_JSON" | $SUDO tee /usr/lib/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json >/dev/null 2>&1 || true
 
-# 3. Flatpak Firefox bridge configuration
-FLATPAK_FF_DIR="$USER_HOME/.var/app/org.mozilla.firefox/.mozilla/native-messaging-hosts"
-mkdir -p "$FLATPAK_FF_DIR" 2>/dev/null || true
-cat << 'EOF' > "$FLATPAK_FF_DIR/fdm_flatpak_bridge.sh"
+# 3. Universal Flatpak Sandbox Bridges (Firefox & Chromium Families)
+if command -v flatpak >/dev/null 2>&1; then
+    for ENTRY in "${FLATPAK_APPS[@]}"; do
+        APP_ID=$(echo "$ENTRY" | cut -d: -f1)
+        REL_PATH=$(echo "$ENTRY" | cut -d: -f2)
+        BROWSER_TYPE=$(echo "$ENTRY" | cut -d: -f3)
+
+        TARGET_DIR="$USER_HOME/.var/app/$APP_ID/$REL_PATH"
+        BRIDGE_SCRIPT="$TARGET_DIR/fdm_flatpak_bridge.sh"
+        mkdir -p "$TARGET_DIR" 2>/dev/null || true
+
+        cat << 'EOF' > "$BRIDGE_SCRIPT"
 #!/bin/sh
 exec /usr/bin/flatpak-spawn --host /opt/freedownloadmanager/wenativehost "$@"
 EOF
-chmod 755 "$FLATPAK_FF_DIR/fdm_flatpak_bridge.sh" 2>/dev/null || true
+        chmod 755 "$BRIDGE_SCRIPT" 2>/dev/null || true
 
-cat << EOF > "$FLATPAK_FF_DIR/org.freedownloadmanager.fdm5.cnh.json"
+        if [ "$BROWSER_TYPE" = "firefox" ]; then
+            cat << EOF > "$TARGET_DIR/org.freedownloadmanager.fdm5.cnh.json"
 {
   "name": "org.freedownloadmanager.fdm5.cnh",
   "description": "Free Download Manager",
-  "path": "$FLATPAK_FF_DIR/fdm_flatpak_bridge.sh",
+  "path": "$BRIDGE_SCRIPT",
   "type": "stdio",
   "allowed_extensions": [
     "fdm_ffext@freedownloadmanager.org",
@@ -348,18 +399,32 @@ cat << EOF > "$FLATPAK_FF_DIR/org.freedownloadmanager.fdm5.cnh.json"
   ]
 }
 EOF
-chmod 644 "$FLATPAK_FF_DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
+        else
+            cat << EOF > "$TARGET_DIR/org.freedownloadmanager.fdm5.cnh.json"
+{
+  "name": "org.freedownloadmanager.fdm5.cnh",
+  "description": "Free Download Manager",
+  "path": "$BRIDGE_SCRIPT",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://ahmpjcflkgiildlgicmcieglgoilbfdp/",
+    "chrome-extension://mdfcjfioplkdchnhcpcobaheocanedjg/"
+  ]
+}
+EOF
+        fi
+        chmod 644 "$TARGET_DIR/org.freedownloadmanager.fdm5.cnh.json" 2>/dev/null || true
 
-# Grant Flatpak host spawn permission to Firefox if flatpak command is present
-if command -v flatpak >/dev/null 2>&1; then
-    flatpak override --user --talk-name=org.freedesktop.Flatpak org.mozilla.firefox 2>/dev/null || true
+        # Grant Flatpak host spawn permission to app
+        flatpak override --user --talk-name=org.freedesktop.Flatpak "$APP_ID" 2>/dev/null || true
+    done
 fi
 
 # Fix permissions for non-root target directories if run via sudo
 if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
-    chown -R "$SUDO_USER:$SUDO_USER" "$USER_HOME/.config" "$USER_HOME/.mozilla" "$USER_HOME/.librewolf" "$USER_HOME/.floorp" "$USER_HOME/.waterfox" 2>/dev/null || true
-    if [ -d "$USER_HOME/.var/app/org.mozilla.firefox" ]; then
-        chown -R "$SUDO_USER:$SUDO_USER" "$USER_HOME/.var/app/org.mozilla.firefox" 2>/dev/null || true
+    chown -R "$SUDO_USER:$SUDO_USER" "$USER_HOME/.config" "$USER_HOME/.mozilla" "$USER_HOME/.librewolf" "$USER_HOME/.floorp" "$USER_HOME/.waterfox" "$USER_HOME/.zen" 2>/dev/null || true
+    if [ -d "$USER_HOME/.var/app" ]; then
+        chown -R "$SUDO_USER:$SUDO_USER" "$USER_HOME/.var/app" 2>/dev/null || true
     fi
 fi
 
