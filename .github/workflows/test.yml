@@ -9,12 +9,22 @@ on:
 jobs:
   test-fedora:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [ "latest", "43" ]
     container:
-      image: fedora:latest
+      image: fedora:${{ matrix.version }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Run Install Script
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Installer
         run: |
-          dnf install -y sudo git
           chmod +x install.sh
           ./install.sh
+
+      - name: Verify Installation Files
+        run: |
+          test -f /opt/freedownloadmanager/wenativehost || exit 1
+          test -f /opt/freedownloadmanager/fdm || exit 1
+          echo "Installation verified successfully!"

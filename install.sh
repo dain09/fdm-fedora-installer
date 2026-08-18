@@ -1,30 +1,24 @@
 #!/usr/bin/env bash
 set -e
 
-echo "==> [1/6] Installing core dependencies..."
-# Ensure required tools are installed
-sudo dnf install -y binutils curl desktop-file-utils
+echo "==> [1/5] Installing dependencies..."
+sudo dnf install -y binutils curl desktop-file-utils xdg-utils gnome-shell-extension-appindicator libappindicator-gtk3
 
-echo "==> [2/6] Downloading and extracting Free Download Manager (.deb)..."
+echo "==> [2/5] Downloading and extracting Free Download Manager..."
 TMP_DIR=$(mktemp -d)
 cd "$TMP_DIR"
 
-# Download the official deb package
 curl -L -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
-
-# Extract package and install to system root
 ar x fdm.deb
 sudo tar -xf data.tar.* -C /
 
-# Run update-desktop-database safely if available
 if command -v update-desktop-database >/dev/null 2>&1; then
     sudo update-desktop-database || true
 fi
-
 rm -rf "$TMP_DIR"
 
-echo "==> [3/6] Configuring Browser Native Messaging Hosts (Chromium & Firefox)..."
-# 1. Chromium-based Browsers (Brave, Chrome, Chromium)
+echo "==> [3/5] Setting up Native Messaging Hosts..."
+# Chromium-based paths
 HOST_DIRS=(
     "$HOME/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts"
     "$HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
@@ -49,10 +43,9 @@ for DIR in "${HOST_DIRS[@]}"; do
     chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json"
 done
 
-# 2. Mozilla Firefox
+# Firefox path
 FIREFOX_DIR="$HOME/.mozilla/native-messaging-hosts"
 mkdir -p "$FIREFOX_DIR"
-
 cat << 'EOF' > "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
 {
   "name": "org.freedownloadmanager.fdm5.cnh",
@@ -66,16 +59,12 @@ cat << 'EOF' > "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
 EOF
 chmod 644 "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
 
-echo "==> [4/6] Installing GNOME System Tray (AppIndicator) support..."
-sudo dnf install -y gnome-shell-extension-appindicator libappindicator-gtk3
-
-echo "==> [5/6] Removing conflicting Flatpak version if present..."
-flatpak uninstall -y org.freedownloadmanager.Manager 2>/dev/null || true
-
-echo "==> [6/6] Registering MIME associations (Torrents & Magnet links)..."
+echo "==> [4/5] Associating torrent and magnet MIME types..."
 xdg-mime default freedownloadmanager.desktop application/x-bittorrent 2>/dev/null || true
 xdg-mime default freedownloadmanager.desktop x-scheme-handler/magnet 2>/dev/null || true
 
+echo "==> [5/5] Removing conflicting Flatpak version if present..."
+flatpak uninstall -y org.freedownloadmanager.Manager 2>/dev/null || true
+
 echo "--------------------------------------------------------"
-echo "Installation completed successfully!"
-echo "Please log out and log back in to enable the top bar tray icon."
+echo "Installation complete! Please restart your browser and session."
