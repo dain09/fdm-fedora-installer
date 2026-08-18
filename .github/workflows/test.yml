@@ -7,8 +7,21 @@ on:
     branches: [ "main" ]
 
 jobs:
+  lint:
+    name: ShellCheck Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: '.'
+
   test-matrix:
     name: Fedora ${{ matrix.version }}
+    needs: lint
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -27,22 +40,29 @@ jobs:
             fedora:${{ matrix.version }} \
             /bin/bash -c "
               set -e
-              echo '==> 1. Running Installation...'
+              echo '==> 1. Testing Help Flags...'
               chmod +x install.sh update.sh uninstall.sh
+              ./install.sh --help
+              ./update.sh --help
+              ./uninstall.sh --help
+
+              echo '==> 2. Running Installation...'
               ./install.sh
 
-              echo '==> 2. Verifying Core Executables, Symlinks & Manifests...'
+              echo '==> 3. Verifying Core Executables, Symlinks & Browser Manifests...'
               test -f /opt/freedownloadmanager/wenativehost
               test -f /opt/freedownloadmanager/fdm
               test -L /usr/local/bin/fdm
               test -f /usr/share/applications/freedownloadmanager.desktop
               test -f \"\$HOME/.mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
+              test -f \"\$HOME/.librewolf/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
+              test -f \"\$HOME/.floorp/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
 
-              echo '==> 3. Testing Update Script...'
+              echo '==> 4. Testing Update Script...'
               ./update.sh
               test -L /usr/local/bin/fdm
 
-              echo '==> 4. Testing Clean Removal...'
+              echo '==> 5. Testing Clean Removal...'
               ./uninstall.sh
               test ! -d /opt/freedownloadmanager
               test ! -L /usr/local/bin/fdm

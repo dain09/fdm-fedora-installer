@@ -42,7 +42,7 @@ chmod +x install.sh
   * **Brave Browser** & **Brave Origin**
   * **Microsoft Edge** & **Edge Dev**
   * **Vivaldi** & **Opera**
-  * **Mozilla Firefox** (`fdm_ffext@freedownloadmanager.org`)
+  * **Mozilla Firefox**, **LibreWolf**, **Floorp** & **Waterfox** (`fdm_ffext@freedownloadmanager.org`)
 * **💻 Command-Line Interface (CLI):** Creates a symlink `/usr/local/bin/fdm` so you can launch FDM directly from terminal (e.g., `fdm <url>`).
 * **🧩 GNOME AppIndicator Support:** Installs `gnome-shell-extension-appindicator` and `libappindicator-gtk3` so FDM can minimize to the top bar properly.
 * **🧲 Default Torrent & Magnet Handler:** Registers FDM with `xdg-mime` to open `.torrent` files and `magnet:` links automatically.

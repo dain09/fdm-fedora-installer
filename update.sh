@@ -1,10 +1,52 @@
 #!/usr/bin/env bash
 set -e
 
+# Terminal Colors
+if [ -t 1 ]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    CYAN='\033[0;36m'
+    BOLD='\033[1m'
+    NC='\033[0m'
+else
+    RED=''
+    GREEN=''
+    CYAN=''
+    BOLD=''
+    NC=''
+fi
+
+info() { echo -e "${CYAN}==>${NC} ${BOLD}$1${NC}"; }
+success() { echo -e "${GREEN}==>${NC} ${BOLD}$1${NC}"; }
+error() { echo -e "${RED}Error:${NC} $1"; }
+
+show_help() {
+    cat << EOF
+Free Download Manager (FDM) Updater for Fedora Linux
+
+Usage:
+  ./update.sh [options]
+
+Options:
+  -h, --help       Show this help message and exit
+
+Description:
+  Downloads and updates Free Download Manager binaries in-place
+  without overwriting browser manifests or existing user configurations.
+EOF
+    exit 0
+}
+
+case "${1:-}" in
+    -h|--help)
+        show_help
+        ;;
+esac
+
 # Architecture Check
 ARCH=$(uname -m)
 if [ "$ARCH" != "x86_64" ]; then
-    echo "Error: Free Download Manager is only available for x86_64 architectures (found: $ARCH)."
+    error "Free Download Manager is only available for x86_64 architectures (found: $ARCH)."
     exit 1
 fi
 
@@ -15,14 +57,17 @@ else
     SUDO=""
 fi
 
-echo "==> Updating Free Download Manager to the latest version..."
+info "Updating Free Download Manager to the latest version..."
 if command -v dnf >/dev/null 2>&1; then
     $SUDO dnf install -y binutils curl desktop-file-utils
 fi
 
+# Gracefully terminate running FDM instances before updating
+pkill -x fdm 2>/dev/null || true
+
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
-cd "$TMP_DIR"
+cd "$TMP_DIR" || exit 1
 
 # Download the official deb package with retry
 curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
@@ -40,4 +85,4 @@ if command -v update-desktop-database >/dev/null 2>&1; then
     $SUDO update-desktop-database || true
 fi
 
-echo "Free Download Manager updated successfully!"
+success "Free Download Manager updated successfully!"
