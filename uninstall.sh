@@ -86,13 +86,15 @@ show_banner
 
 # Interactive confirmation prompt if running in interactive terminal
 if [ "$AUTO_CONFIRM" != "true" ] && [ -t 0 ]; then
+    echo -e "${YELLOW}Are you really leaving? Was it something I downloaded? 🥺💔${NC}"
+    echo -e "${DIM}(Goodbye friend, your downloaded Linux ISOs will miss you!)${NC}"
     echo -ne "${YELLOW}Are you sure you want to completely remove Free Download Manager? [y/N]: ${NC}"
     read -r response
     case "$response" in
         [yY][eE][sS]|[yY])
             ;;
         *)
-            echo "Uninstallation cancelled."
+            echo -e "${GREEN}Uninstallation cancelled. (Phew, you stayed! 🥳)${NC}"
             exit 0
             ;;
     esac
@@ -149,3 +151,5 @@ elif command -v kbuildsycoca5 >/dev/null 2>&1; then
 fi
 
 success "Free Download Manager has been completely removed."
+echo -e "${DIM}We promised to never give you up, but you let us down... 🕊️💔${NC}"
+echo ""

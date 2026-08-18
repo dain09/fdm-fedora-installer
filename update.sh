@@ -292,6 +292,8 @@ show_help() {
     echo "  -q, --quality RES     Target maximum video resolution (e.g. 1080p, 720p, 4k)"
     echo "  -o, --output DIR      Custom destination folder (default: ~/Downloads)"
     echo "  -c, --connections N   Number of parallel download streams (default: 8)"
+    echo "  --coffee              Secret developer fuel ☕"
+    echo "  --rickroll            Experience the legendary internet tradition 🕺"
     echo ""
     echo "Examples:"
     echo "  fdm-dl https://www.youtube.com/watch?v=dQw4w9WgXcQ"
@@ -323,6 +325,27 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         -h|--help)
             show_help
+            ;;
+        --coffee)
+            echo -e "${YELLOW}"
+            cat << 'COFFEE_EOF'
+      (  )   (   )  )
+       ) (   )  (  (
+       ( )  (    ) )
+       ____________
+      <____________> ___
+      |            |/ _ \
+      |  FDM Brew  | | | |
+      |   Coffee   |\___/
+      |____________|
+COFFEE_EOF
+            echo -e "${NC}${BOLD}Brewing caffeine while your 8 download threads fly! ☕🚀${NC}"
+            exit 0
+            ;;
+        --rickroll)
+            URL="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            AUTO_CONFIRM=true
+            shift
             ;;
         -y|--yes)
             AUTO_CONFIRM=true
@@ -427,7 +450,7 @@ if [ "$AUTO_CONFIRM" != "true" ] && [ -t 0 ]; then
     read -r -p "Proceed with accelerated download? [Y/n] " CONFIRM
     CONFIRM=${CONFIRM:-Y}
     if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
-        echo -e "${YELLOW}Download cancelled by user.${NC}"
+        echo -e "${YELLOW}Download cancelled. Rick Astley is disappointed in you... 😔🕺${NC}"
         exit 0
     fi
 fi
@@ -462,13 +485,19 @@ if [ $EXIT_CODE -eq 0 ]; then
     # Desktop Notification with Title and Size
     if command -v notify-send >/dev/null 2>&1; then
         NOTIF_BODY="$TITLE ($EST_SIZE)"
+        if [ "$URL" = "https://www.youtube.com/watch?v=dQw4w9WgXcQ" ]; then
+            NOTIF_TITLE="You just got Rickrolled in 4K by @dain09! 🕺🎶"
+        else
+            NOTIF_TITLE="Media Download Complete (⚡ ${ELAPSED}s)"
+        fi
+
         if [ -n "$DBUS_SESSION_BUS_ADDRESS" ]; then
-            notify-send -i freedownloadmanager -a "Free Download Manager" "Media Download Complete (⚡ ${ELAPSED}s)" "$NOTIF_BODY" 2>/dev/null || true
+            notify-send -i freedownloadmanager -a "Free Download Manager" "$NOTIF_TITLE" "$NOTIF_BODY" 2>/dev/null || true
         elif [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
             local_uid=$(id -u "$SUDO_USER" 2>/dev/null || true)
             if [ -S "/run/user/$local_uid/bus" ]; then
                 sudo -u "$SUDO_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$local_uid/bus" \
-                    notify-send -i freedownloadmanager -a "Free Download Manager" "Media Download Complete (⚡ ${ELAPSED}s)" "$NOTIF_BODY" 2>/dev/null || true
+                    notify-send -i freedownloadmanager -a "Free Download Manager" "$NOTIF_TITLE" "$NOTIF_BODY" 2>/dev/null || true
             fi
         fi
     fi
