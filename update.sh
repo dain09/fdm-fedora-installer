@@ -332,11 +332,20 @@ if [ -z "$URL" ]; then
     exit 1
 fi
 
-# Ensure yt-dlp is installed
+# Ensure yt-dlp and nodejs are installed
+MISSING_PKGS=""
 if ! command -v yt-dlp >/dev/null 2>&1; then
-    echo -e "${YELLOW}==>${NC} ${BOLD}Installing yt-dlp stream engine...${NC}"
-    sudo dnf install -y yt-dlp || {
-        echo -e "${RED}Error:${NC} Failed to install yt-dlp. Please run: sudo dnf install yt-dlp"
+    MISSING_PKGS="$MISSING_PKGS yt-dlp"
+fi
+if ! command -v node >/dev/null 2>&1; then
+    MISSING_PKGS="$MISSING_PKGS nodejs"
+fi
+
+if [ -n "$MISSING_PKGS" ]; then
+    echo -e "${YELLOW}==>${NC} ${BOLD}Installing media dependencies ($MISSING_PKGS)...${NC}"
+    # shellcheck disable=SC2086
+    sudo dnf install -y $MISSING_PKGS || {
+        echo -e "${RED}Error:${NC} Failed to install $MISSING_PKGS. Please run: sudo dnf install $MISSING_PKGS"
         exit 1
     }
 fi
@@ -362,8 +371,11 @@ echo -e "  • Destination : ${CYAN}$DEST_DIR${NC}"
 echo -e "  • Connections : ${BOLD}$CONCURRENT parallel threads${NC}"
 echo ""
 
-# Execute download with multi-connection acceleration
+# Execute download with multi-connection acceleration & JS challenge solving
 yt-dlp -N "$CONCURRENT" \
+       --js-runtimes node \
+       --remote-components ejs:github \
+       --extractor-args "youtube:player_client=web,android" \
        --no-warnings \
        --progress \
        -P "$DEST_DIR" \
