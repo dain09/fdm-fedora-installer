@@ -5,6 +5,9 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  schedule:
+    # Run every Sunday at midnight UTC to verify upstream binary availability
+    - cron: '0 0 * * 0'
 
 jobs:
   lint:
@@ -52,20 +55,23 @@ jobs:
               echo '==> 3. Verifying Core Executables, Symlinks & Browser Manifests...'
               test -f /opt/freedownloadmanager/wenativehost
               test -f /opt/freedownloadmanager/fdm
-              test -L /usr/local/bin/fdm
+              test -f /usr/local/bin/fdm
               test -f /usr/share/applications/freedownloadmanager.desktop
               test -f \"\$HOME/.mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
               test -f \"\$HOME/.librewolf/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
               test -f \"\$HOME/.floorp/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
 
-              echo '==> 4. Testing Update Script...'
-              ./update.sh
-              test -L /usr/local/bin/fdm
+              echo '==> 4. Testing System Doctor Diagnosis...'
+              ./install.sh --doctor
 
-              echo '==> 5. Testing Clean Removal...'
+              echo '==> 5. Testing Update Script...'
+              ./update.sh
+              test -f /usr/local/bin/fdm
+
+              echo '==> 6. Testing Clean Removal...'
               ./uninstall.sh
               test ! -d /opt/freedownloadmanager
-              test ! -L /usr/local/bin/fdm
+              test ! -f /usr/local/bin/fdm
               
               echo '==> All checks passed!'
             "

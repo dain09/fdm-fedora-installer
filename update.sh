@@ -72,13 +72,25 @@ cd "$TMP_DIR" || exit 1
 # Download the official deb package with retry
 curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
 
+# Verify archive integrity
+if ! ar t fdm.deb >/dev/null 2>&1; then
+    error "Downloaded package is corrupted or incomplete. Please check your internet connection and retry."
+    exit 1
+fi
+
 # Extract package and install to system root
 ar x fdm.deb
 $SUDO tar -xf data.tar.* -C /
 $SUDO chmod +x /opt/freedownloadmanager/fdm /opt/freedownloadmanager/wenativehost 2>/dev/null || true
 
-# Ensure symlink in PATH exists
-$SUDO ln -sf /opt/freedownloadmanager/fdm /usr/local/bin/fdm
+# Ensure HiDPI & Wayland CLI wrapper exists
+cat << 'EOF' > "$TMP_DIR/fdm_cli"
+#!/usr/bin/env bash
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+exec /opt/freedownloadmanager/fdm "$@"
+EOF
+$SUDO cp "$TMP_DIR/fdm_cli" /usr/local/bin/fdm
+$SUDO chmod 755 /usr/local/bin/fdm
 
 # Run update-desktop-database safely if available
 if command -v update-desktop-database >/dev/null 2>&1; then

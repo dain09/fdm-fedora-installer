@@ -8,7 +8,7 @@ If you've ever tried using **Free Download Manager (FDM)** on Fedora via Flatpak
 1. **Broken Browser Integration:** The browser extension fails to communicate with the app due to sandbox isolation (`Native Messaging Host` errors).
 2. **Missing Tray Icon:** The app closes completely instead of staying quietly in the background when minimized.
 
-This repository provides an automated installation script that extracts the official native build directly to `/opt`, sets up **Native Messaging** hosts across all major browsers, configures GNOME tray support, creates a terminal command symlink, and registers torrent/magnet URL handlers.
+This repository provides an automated installation script that extracts the official native build directly to `/opt`, sets up **Native Messaging** hosts across all major browsers, configures GNOME tray support, creates a terminal command wrapper (optimized for HiDPI/Wayland), and registers torrent/magnet URL handlers.
 
 ---
 
@@ -36,14 +36,14 @@ chmod +x install.sh
 
 ## 🛠️ What the Script Does
 
-* **📦 Native Extraction:** Extracts the official `.deb` binaries directly to `/opt/freedownloadmanager` without requiring `dpkg`/`apt`.
+* **📦 Native Extraction & Integrity Check:** Verifies and extracts the official `.deb` binaries directly to `/opt/freedownloadmanager` without requiring `dpkg`/`apt`.
 * **🌐 Universal Browser Integration:** Configures Native Messaging manifests (`org.freedownloadmanager.fdm5.cnh.json`) across:
   * **Google Chrome** & **Chromium**
   * **Brave Browser** & **Brave Origin**
   * **Microsoft Edge** & **Edge Dev**
   * **Vivaldi** & **Opera**
   * **Mozilla Firefox**, **LibreWolf**, **Floorp** & **Waterfox** (`fdm_ffext@freedownloadmanager.org`)
-* **💻 Command-Line Interface (CLI):** Creates a symlink `/usr/local/bin/fdm` so you can launch FDM directly from terminal (e.g., `fdm <url>`).
+* **💻 Command-Line Interface (CLI):** Creates a wrapper `/usr/local/bin/fdm` with automatic HiDPI scaling so you can launch FDM directly from terminal (e.g., `fdm <url>`).
 * **🧩 GNOME AppIndicator Support:** Installs `gnome-shell-extension-appindicator` and `libappindicator-gtk3` so FDM can minimize to the top bar properly.
 * **🧲 Default Torrent & Magnet Handler:** Registers FDM with `xdg-mime` to open `.torrent` files and `magnet:` links automatically.
 * **🧹 Cleans Up Conflicts:** Removes lingering Flatpak background processes and conflicting installations.
@@ -54,7 +54,7 @@ chmod +x install.sh
 
 1. **Install the Browser Extension:**
    * **Chrome / Brave / Edge / Vivaldi / Opera:** Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/free-download-manager-chr/ahmpjcflkgiildlgicmcieglgoilbfdp).
-   * **Mozilla Firefox:** Install from [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/free-download-manager-addon/).
+   * **Mozilla Firefox / LibreWolf / Floorp:** Install from [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/free-download-manager-addon/).
 2. **Launch FDM** from your application menu or run `fdm` in terminal.
 3. **Log out and log back in** (or restart GNOME Shell) to enable the top-bar tray icon.
 4. Download any file or click a magnet link — FDM will catch it instantly!
@@ -78,6 +78,21 @@ fdm "magnet:?xt=urn:btih:..."
 
 ---
 
+## 🩺 System Doctor Diagnosis
+
+You can run the built-in diagnostic tool at any time to verify your installation health:
+
+```bash
+./install.sh --doctor
+```
+
+Or via one-liner:
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/install.sh)" -- --doctor
+```
+
+---
+
 ## 🔄 Updating FDM
 
 To update the FDM binaries to the latest release without re-configuring your browsers or settings:
@@ -95,7 +110,7 @@ Or run locally if cloned:
 
 ## 🗑️ Uninstallation
 
-To completely remove Free Download Manager, its desktop entry, CLI symlink, and all browser manifests:
+To completely remove Free Download Manager, its desktop entry, CLI wrapper, and all browser manifests:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/uninstall.sh)"

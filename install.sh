@@ -23,30 +23,6 @@ success() { echo -e "${GREEN}==>${NC} ${BOLD}$1${NC}"; }
 warn() { echo -e "${YELLOW}Warning:${NC} $1"; }
 error() { echo -e "${RED}Error:${NC} $1"; }
 
-show_help() {
-    cat << EOF
-Free Download Manager (FDM) Native Installer for Fedora Linux
-
-Usage:
-  ./install.sh [options]
-
-Options:
-  -h, --help       Show this help message and exit
-
-Description:
-  Installs Free Download Manager native binaries directly to /opt/freedownloadmanager,
-  configures browser Native Messaging Hosts across Chromium and Firefox browsers,
-  registers MIME handlers for torrent/magnet links, and sets up GNOME tray integration.
-EOF
-    exit 0
-}
-
-case "${1:-}" in
-    -h|--help)
-        show_help
-        ;;
-esac
-
 # 1. Architecture Check
 ARCH=$(uname -m)
 if [ "$ARCH" != "x86_64" ]; then
@@ -66,6 +42,136 @@ else
         USER_HOME="$HOME"
     fi
 fi
+
+# Chromium-based Manifest Paths
+CHROMIUM_HOST_DIRS=(
+    "$USER_HOME/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts"
+    "$USER_HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
+    "$USER_HOME/.config/google-chrome/NativeMessagingHosts"
+    "$USER_HOME/.config/chromium/NativeMessagingHosts"
+    "$USER_HOME/.config/microsoft-edge/NativeMessagingHosts"
+    "$USER_HOME/.config/microsoft-edge-dev/NativeMessagingHosts"
+    "$USER_HOME/.config/vivaldi/NativeMessagingHosts"
+    "$USER_HOME/.config/opera/NativeMessagingHosts"
+)
+
+# Firefox-based Manifest Paths
+FIREFOX_HOST_DIRS=(
+    "$USER_HOME/.mozilla/native-messaging-hosts"
+    "$USER_HOME/.librewolf/native-messaging-hosts"
+    "$USER_HOME/.floorp/native-messaging-hosts"
+    "$USER_HOME/.waterfox/native-messaging-hosts"
+)
+
+show_help() {
+    cat << EOF
+Free Download Manager (FDM) Native Installer for Fedora Linux
+
+Usage:
+  ./install.sh [options]
+
+Options:
+  -h, --help       Show this help message and exit
+  -d, --doctor     Run system diagnostic report and verify installation health
+
+Description:
+  Installs Free Download Manager native binaries directly to /opt/freedownloadmanager,
+  configures browser Native Messaging Hosts across Chromium and Firefox browsers,
+  registers MIME handlers for torrent/magnet links, and sets up GNOME tray integration.
+EOF
+    exit 0
+}
+
+run_doctor() {
+    echo -e "${BOLD}========================================================${NC}"
+    echo -e "${BOLD}   Free Download Manager (FDM) - System Doctor Report   ${NC}"
+    echo -e "${BOLD}========================================================${NC}"
+    echo ""
+
+    # 1. Core Binaries
+    echo -e "${CYAN}[Core Binaries]${NC}"
+    if [ -f /opt/freedownloadmanager/fdm ] && [ -x /opt/freedownloadmanager/fdm ]; then
+        echo -e "  ${GREEN}[✓]${NC} FDM binary: /opt/freedownloadmanager/fdm"
+    else
+        echo -e "  ${RED}[✗]${NC} FDM binary missing or not executable"
+    fi
+
+    if [ -f /opt/freedownloadmanager/wenativehost ] && [ -x /opt/freedownloadmanager/wenativehost ]; then
+        echo -e "  ${GREEN}[✓]${NC} Native messaging host: /opt/freedownloadmanager/wenativehost"
+    else
+        echo -e "  ${RED}[✗]${NC} Native messaging host missing or not executable"
+    fi
+
+    if [ -f /usr/local/bin/fdm ] && [ -x /usr/local/bin/fdm ]; then
+        echo -e "  ${GREEN}[✓]${NC} CLI Command wrapper: /usr/local/bin/fdm"
+    else
+        echo -e "  ${YELLOW}[-]${NC} CLI Command wrapper not installed"
+    fi
+    echo ""
+
+    # 2. Desktop & MIME
+    echo -e "${CYAN}[Desktop & MIME Integration]${NC}"
+    if [ -f /usr/share/applications/freedownloadmanager.desktop ]; then
+        echo -e "  ${GREEN}[✓]${NC} Desktop launcher: /usr/share/applications/freedownloadmanager.desktop"
+    else
+        echo -e "  ${RED}[✗]${NC} Desktop launcher missing"
+    fi
+
+    TORRENT_HANDLER=$(xdg-mime query default application/x-bittorrent 2>/dev/null || true)
+    if [ "$TORRENT_HANDLER" = "freedownloadmanager.desktop" ]; then
+        echo -e "  ${GREEN}[✓]${NC} Torrent MIME handler: freedownloadmanager.desktop"
+    else
+        echo -e "  ${YELLOW}[-]${NC} Torrent MIME handler: ${TORRENT_HANDLER:-None}"
+    fi
+
+    MAGNET_HANDLER=$(xdg-mime query default x-scheme-handler/magnet 2>/dev/null || true)
+    if [ "$MAGNET_HANDLER" = "freedownloadmanager.desktop" ]; then
+        echo -e "  ${GREEN}[✓]${NC} Magnet MIME handler: freedownloadmanager.desktop"
+    else
+        echo -e "  ${YELLOW}[-]${NC} Magnet MIME handler: ${MAGNET_HANDLER:-None}"
+    fi
+    echo ""
+
+    # 3. Browser Manifests
+    echo -e "${CYAN}[Browser Native Messaging Manifests]${NC}"
+    for DIR in "${CHROMIUM_HOST_DIRS[@]}"; do
+        BROWSER_NAME=$(basename "$(dirname "$DIR")")
+        if [ -f "$DIR/org.freedownloadmanager.fdm5.cnh.json" ]; then
+            echo -e "  ${GREEN}[✓]${NC} $BROWSER_NAME: configured"
+        else
+            echo -e "  ${YELLOW}[-]${NC} $BROWSER_NAME: not present"
+        fi
+    done
+
+    for DIR in "${FIREFOX_HOST_DIRS[@]}"; do
+        BROWSER_NAME=$(basename "$(dirname "$DIR")")
+        if [ -f "$DIR/org.freedownloadmanager.fdm5.cnh.json" ]; then
+            echo -e "  ${GREEN}[✓]${NC} $BROWSER_NAME: configured"
+        else
+            echo -e "  ${YELLOW}[-]${NC} $BROWSER_NAME: not present"
+        fi
+    done
+    echo ""
+
+    # 4. GNOME Tray
+    echo -e "${CYAN}[GNOME Tray (AppIndicator) Support]${NC}"
+    if rpm -q gnome-shell-extension-appindicator >/dev/null 2>&1; then
+        echo -e "  ${GREEN}[✓]${NC} gnome-shell-extension-appindicator package is installed"
+    else
+        echo -e "  ${YELLOW}[-]${NC} gnome-shell-extension-appindicator package not installed"
+    fi
+    echo ""
+    exit 0
+}
+
+case "${1:-}" in
+    -h|--help)
+        show_help
+        ;;
+    -d|--doctor|--status|--check)
+        run_doctor
+        ;;
+esac
 
 # 3. Check for package manager (Fedora Workstation vs Fedora Atomic/Silverblue)
 info "[1/6] Installing system dependencies..."
@@ -87,30 +193,31 @@ trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 cd "$TMP_DIR" || exit 1
 
 curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+
+# Verify archive integrity
+if ! ar t fdm.deb >/dev/null 2>&1; then
+    error "Downloaded package is corrupted or incomplete. Please check your internet connection and retry."
+    exit 1
+fi
+
 ar x fdm.deb
 $SUDO tar -xf data.tar.* -C /
 $SUDO chmod +x /opt/freedownloadmanager/fdm /opt/freedownloadmanager/wenativehost 2>/dev/null || true
 
-# Create symlink in PATH
-$SUDO ln -sf /opt/freedownloadmanager/fdm /usr/local/bin/fdm
+# Create HiDPI & Wayland compatible CLI wrapper in PATH
+cat << 'EOF' > "$TMP_DIR/fdm_cli"
+#!/usr/bin/env bash
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+exec /opt/freedownloadmanager/fdm "$@"
+EOF
+$SUDO cp "$TMP_DIR/fdm_cli" /usr/local/bin/fdm
+$SUDO chmod 755 /usr/local/bin/fdm
 
 if command -v update-desktop-database >/dev/null 2>&1; then
     $SUDO update-desktop-database || true
 fi
 
 info "[3/6] Setting up Native Messaging Hosts..."
-# Chromium-based Manifests
-CHROMIUM_HOST_DIRS=(
-    "$USER_HOME/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts"
-    "$USER_HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
-    "$USER_HOME/.config/google-chrome/NativeMessagingHosts"
-    "$USER_HOME/.config/chromium/NativeMessagingHosts"
-    "$USER_HOME/.config/microsoft-edge/NativeMessagingHosts"
-    "$USER_HOME/.config/microsoft-edge-dev/NativeMessagingHosts"
-    "$USER_HOME/.config/vivaldi/NativeMessagingHosts"
-    "$USER_HOME/.config/opera/NativeMessagingHosts"
-)
-
 CHROMIUM_JSON='{
   "name": "org.freedownloadmanager.fdm5.cnh",
   "description": "Free Download Manager",
@@ -127,14 +234,6 @@ for DIR in "${CHROMIUM_HOST_DIRS[@]}"; do
     echo "$CHROMIUM_JSON" > "$DIR/org.freedownloadmanager.fdm5.cnh.json"
     chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json"
 done
-
-# Firefox-based Manifests (Firefox, LibreWolf, Floorp, Waterfox)
-FIREFOX_HOST_DIRS=(
-    "$USER_HOME/.mozilla/native-messaging-hosts"
-    "$USER_HOME/.librewolf/native-messaging-hosts"
-    "$USER_HOME/.floorp/native-messaging-hosts"
-    "$USER_HOME/.waterfox/native-messaging-hosts"
-)
 
 FIREFOX_JSON='{
   "name": "org.freedownloadmanager.fdm5.cnh",
