@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
-# Terminal Colors
+# Terminal Colors & Styling
 if [ -t 1 ]; then
     RED='\033[0;31m'
     GREEN='\033[0;32m'
     CYAN='\033[0;36m'
     YELLOW='\033[1;33m'
     BOLD='\033[1m'
+    DIM='\033[2m'
     NC='\033[0m'
 else
     RED=''
@@ -15,6 +16,7 @@ else
     CYAN=''
     YELLOW=''
     BOLD=''
+    DIM=''
     NC=''
 fi
 
@@ -23,10 +25,23 @@ success() { echo -e "${GREEN}==>${NC} ${BOLD}$1${NC}"; }
 warn() { echo -e "${YELLOW}Warning:${NC} $1"; }
 error() { echo -e "${RED}Error:${NC} $1"; }
 
-show_help() {
-    cat << EOF
-Free Download Manager (FDM) Updater for Fedora Linux
+show_banner() {
+    echo -e "${CYAN}${BOLD}"
+    cat << "EOF"
+  _____ ____  __  __   _   _           _       _            
+ |  ___|  _ \|  \/  | | | | |_ __   __| | __ _| |_ ___ _ __ 
+ | |_  | | | | |\/| | | | | | '_ \ / _` |/ _` | __/ _ \ '__|
+ |  _| | |_| | |  | | | |_| | |_) | (_| | (_| | ||  __/ |   
+ |_|   |____/|_|  |_|  \___/| .__/ \__,_|\__,_|\__\___|_|   
+                            |_|                             
+EOF
+    echo -e "${NC}${CYAN} Free Download Manager In-Place Updater${NC}"
+    echo -e "${DIM}------------------------------------------------------------${NC}"
+}
 
+show_help() {
+    show_banner
+    cat << EOF
 Usage:
   ./update.sh [options]
 
@@ -58,6 +73,8 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+show_banner
 
 # Architecture Check
 ARCH=$(uname -m)

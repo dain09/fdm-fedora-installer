@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
-# Terminal Colors
+# Terminal Colors & Styling
 if [ -t 1 ]; then
     RED='\033[0;31m'
     GREEN='\033[0;32m'
     CYAN='\033[0;36m'
     YELLOW='\033[1;33m'
     BOLD='\033[1m'
+    DIM='\033[2m'
     NC='\033[0m'
 else
     RED=''
@@ -15,6 +16,7 @@ else
     CYAN=''
     YELLOW=''
     BOLD=''
+    DIM=''
     NC=''
 fi
 
@@ -22,6 +24,19 @@ info() { echo -e "${CYAN}==>${NC} ${BOLD}$1${NC}"; }
 success() { echo -e "${GREEN}==>${NC} ${BOLD}$1${NC}"; }
 warn() { echo -e "${YELLOW}Warning:${NC} $1"; }
 error() { echo -e "${RED}Error:${NC} $1"; }
+
+show_banner() {
+    echo -e "${CYAN}${BOLD}"
+    cat << "EOF"
+  _____ ____  __  __   _           _        _ _           
+ |  ___|  _ \|  \/  | (_)_ __  ___| |_ __ _| | | ___ _ __ 
+ | |_  | | | | |\/| | | | '_ \/ __| __/ _` | | |/ _ \ '__|
+ |  _| | |_| | |  | | | | | | \__ \ || (_| | | |  __/ |   
+ |_|   |____/|_|  |_| |_|_| |_|___/\__\__,_|_|_|\___|_|   
+EOF
+    echo -e "${NC}${CYAN} Native Free Download Manager Suite for Fedora Linux${NC}"
+    echo -e "${DIM}------------------------------------------------------------${NC}"
+}
 
 # 1. Architecture Check
 ARCH=$(uname -m)
@@ -93,9 +108,8 @@ FLATPAK_APPS=(
 )
 
 show_help() {
+    show_banner
     cat << EOF
-Free Download Manager (FDM) Native Installer for Fedora Linux
-
 Usage:
   ./install.sh [options] [path/to/fdm.deb]
 
@@ -118,9 +132,8 @@ EOF
 }
 
 run_doctor() {
-    echo -e "${BOLD}========================================================${NC}"
-    echo -e "${BOLD}   Free Download Manager (FDM) - System Doctor Report   ${NC}"
-    echo -e "${BOLD}========================================================${NC}"
+    show_banner
+    echo -e "${BOLD}=== System Diagnostic & Health Audit ===${NC}"
     echo ""
 
     # 1. Core Binaries
@@ -149,11 +162,11 @@ run_doctor() {
     fi
 
     if [ -f /usr/local/bin/fdm-update ] && [ -x /usr/local/bin/fdm-update ]; then
-        echo -e "  ${GREEN}[✓]${NC} CLI Updater command: /usr/local/bin/fdm-update"
+        echo -e "  ${GREEN}[✓]${NC} CLI Updater shortcut: /usr/local/bin/fdm-update"
     fi
 
     if [ -f /usr/local/bin/fdm-doctor ] && [ -x /usr/local/bin/fdm-doctor ]; then
-        echo -e "  ${GREEN}[✓]${NC} CLI Doctor command: /usr/local/bin/fdm-doctor"
+        echo -e "  ${GREEN}[✓]${NC} CLI Diagnostics shortcut: /usr/local/bin/fdm-doctor"
     fi
     echo ""
 
@@ -182,7 +195,7 @@ run_doctor() {
     if [ -f "$USER_HOME/.config/autostart/freedownloadmanager.desktop" ]; then
         echo -e "  ${GREEN}[✓]${NC} Silent Autostart on boot: enabled (~/.config/autostart/freedownloadmanager.desktop)"
     else
-        echo -e "  ${CYAN}[i]${NC} Silent Autostart on boot: disabled (run ./install.sh -a to enable)"
+        echo -e "  ${DIM}[i] Silent Autostart on boot: disabled (run ./install.sh -a to enable)${NC}"
     fi
     echo ""
 
@@ -229,6 +242,17 @@ run_doctor() {
         echo -e "  ${GREEN}[✓]${NC} System Tray supported"
     fi
     echo ""
+
+    # 5. Network & BitTorrent Firewall Optimization
+    echo -e "${CYAN}[Network & BitTorrent Optimization]${NC}"
+    if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld 2>/dev/null; then
+        echo -e "  ${GREEN}[✓]${NC} firewalld: active"
+        echo -e "  ${DIM}Tip: To maximize BitTorrent peer connections through firewalld, run:${NC}"
+        echo -e "  ${BOLD}sudo firewall-cmd --permanent --add-port=6881-6889/tcp --add-port=6881-6889/udp && sudo firewall-cmd --reload${NC}"
+    else
+        echo -e "  ${GREEN}[✓]${NC} Firewall: unrestricted or firewalld inactive"
+    fi
+    echo ""
     exit 0
 }
 
@@ -260,6 +284,8 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+show_banner
 
 # 3. Check for package manager & desktop environment
 info "[1/6] Installing system dependencies..."
@@ -424,6 +450,39 @@ EOF
     chmod 644 "$USER_HOME/.config/autostart/freedownloadmanager.desktop"
     success "Silent autostart on boot enabled (~/.config/autostart/freedownloadmanager.desktop)"
 fi
+
+# Bash & Zsh auto-completion
+cat << 'EOF' > "$TMP_DIR/fdm_completion"
+_fdm_complete() {
+    local cur opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    opts="--help --hidden --version"
+
+    if [[ ${cur} == -* ]] ; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+}
+complete -F _fdm_complete fdm
+
+_fdm_update_complete() {
+    local cur opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    opts="--help --check --force -h -c -f"
+
+    if [[ ${cur} == -* ]] ; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+}
+complete -F _fdm_update_complete fdm-update
+EOF
+$SUDO mkdir -p /usr/share/bash-completion/completions 2>/dev/null || true
+$SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm
+$SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-update
+$SUDO chmod 644 /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update 2>/dev/null || true
 
 # Refresh desktop database and icon caches across GNOME and KDE
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -665,8 +724,18 @@ if command -v flatpak >/dev/null 2>&1; then
 fi
 
 info "[6/6] Finalizing setup..."
-echo "--------------------------------------------------------"
-success "Free Download Manager has been installed successfully!"
-echo -e "You can launch it from your applications menu or type '${BOLD}fdm${NC}' in your terminal."
-echo -e "CLI helper commands: '${BOLD}fdm-update${NC}' and '${BOLD}fdm-doctor${NC}'."
-echo -e "Please restart your browser to activate the extension."
+echo ""
+echo -e "${GREEN}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
+echo -e "${GREEN}${BOLD}│  ✔ Free Download Manager installed & configured seamlessly!  │${NC}"
+echo -e "${GREEN}${BOLD}├──────────────────────────────────────────────────────────────┤${NC}"
+echo -e "  ${BOLD}• App Launcher :${NC} Search 'Free Download Manager' in your menu"
+echo -e "  ${BOLD}• CLI Launch   :${NC} ${CYAN}fdm &${NC} or ${CYAN}fdm <url>${NC}"
+echo -e "  ${BOLD}• Update Tool  :${NC} ${CYAN}fdm-update${NC} (or ${CYAN}fdm-update --check${NC})"
+echo -e "  ${BOLD}• Health Audit :${NC} ${CYAN}fdm-doctor${NC}"
+if [ "$ENABLE_AUTOSTART" = "true" ]; then
+    echo -e "  ${BOLD}• Autostart    :${NC} ${GREEN}Enabled (silent tray on boot)${NC}"
+else
+    echo -e "  ${BOLD}• Autostart    :${NC} Run ${CYAN}./install.sh -a${NC} to start with system"
+fi
+echo -e "${GREEN}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
+echo ""
