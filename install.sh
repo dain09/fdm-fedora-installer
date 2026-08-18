@@ -743,10 +743,6 @@ show_help() {
     exit 0
 }
 
-if [ "$#" -eq 0 ]; then
-    show_help
-fi
-
 # Detect actual user home for Downloads folder
 if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
     TARGET_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
@@ -824,7 +820,16 @@ COFFEE_EOF
 done
 
 if [ -z "$URL" ]; then
+    if [ -t 0 ]; then
+        echo -ne "${CYAN}🔗 Paste media URL (YouTube, Twitter, TikTok...): ${NC}"
+        read -r URL
+        URL=$(echo "$URL" | tr -d '\r\n[:space:]')
+    fi
+fi
+
+if [ -z "$URL" ]; then
     echo -e "${RED}Error:${NC} No URL provided."
+    echo -e "Run '${BOLD}fdm-dl --help${NC}' for usage instructions."
     exit 1
 fi
 
