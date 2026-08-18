@@ -648,6 +648,154 @@ EOF
 $SUDO cp "$TMP_DIR/fdm_doctor_cli" /usr/local/bin/fdm-doctor
 $SUDO chmod 755 /usr/local/bin/fdm-doctor
 
+cat << 'EOF' > "$TMP_DIR/fdm_dl_cli"
+#!/usr/bin/env bash
+# Free Download Manager Accelerated CLI Media Downloader
+# Powered by yt-dlp with multi-connection chunk acceleration
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+show_help() {
+    echo -e "${CYAN}${BOLD}Free Download Manager - CLI Media Downloader (fdm-dl)${NC}"
+    echo "Usage:"
+    echo "  fdm-dl [options] <URL>"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help            Show this help message"
+    echo "  -a, --audio-only      Extract and download audio only (best quality MP3/M4A)"
+    echo "  -q, --quality RES     Target maximum video resolution (e.g. 1080p, 720p, 4k)"
+    echo "  -o, --output DIR      Custom destination folder (default: ~/Downloads)"
+    echo "  -c, --connections N   Number of parallel download streams (default: 8)"
+    echo ""
+    echo "Examples:"
+    echo "  fdm-dl https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    echo "  fdm-dl -a https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    echo "  fdm-dl -q 1080p https://twitter.com/user/status/123456789"
+    exit 0
+}
+
+if [ "$#" -eq 0 ]; then
+    show_help
+fi
+
+# Detect actual user home for Downloads folder
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    TARGET_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+else
+    TARGET_HOME="$HOME"
+fi
+
+DEST_DIR="$TARGET_HOME/Downloads"
+AUDIO_ONLY=false
+TARGET_RES=""
+CONCURRENT=8
+URL=""
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -h|--help)
+            show_help
+            ;;
+        -a|--audio|--audio-only)
+            AUDIO_ONLY=true
+            shift
+            ;;
+        -q|--quality)
+            TARGET_RES="$2"
+            shift 2
+            ;;
+        -o|--output)
+            DEST_DIR="$2"
+            shift 2
+            ;;
+        -c|--connections)
+            CONCURRENT="$2"
+            shift 2
+            ;;
+        *)
+            URL="$1"
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$URL" ]; then
+    echo -e "${RED}Error:${NC} No URL provided."
+    exit 1
+fi
+
+# Ensure yt-dlp is installed
+if ! command -v yt-dlp >/dev/null 2>&1; then
+    echo -e "${YELLOW}==>${NC} ${BOLD}Installing yt-dlp stream engine...${NC}"
+    sudo dnf install -y yt-dlp || {
+        echo -e "${RED}Error:${NC} Failed to install yt-dlp. Please run: sudo dnf install yt-dlp"
+        exit 1
+    }
+fi
+
+mkdir -p "$DEST_DIR" 2>/dev/null || true
+
+# Format selection
+if [ "$AUDIO_ONLY" = "true" ]; then
+    YTDL_OPTS=(-x --audio-format mp3 --audio-quality 0)
+    MODE_STR="Audio Only (MP3)"
+elif [ -n "$TARGET_RES" ]; then
+    RES_NUM=$(echo "$TARGET_RES" | tr -cd '0-9')
+    YTDL_OPTS=(-f "bestvideo[height<=${RES_NUM}]+bestaudio/best[height<=${RES_NUM}]/best")
+    MODE_STR="Video (${TARGET_RES})"
+else
+    YTDL_OPTS=(-f "bestvideo+bestaudio/best")
+    MODE_STR="Best Quality (Video + Audio)"
+fi
+
+echo -e "${CYAN}${BOLD}==> Free Download Manager CLI Accelerator${NC}"
+echo -e "  • Mode        : ${BOLD}$MODE_STR${NC}"
+echo -e "  • Destination : ${CYAN}$DEST_DIR${NC}"
+echo -e "  • Connections : ${BOLD}$CONCURRENT parallel threads${NC}"
+echo ""
+
+# Execute download with multi-connection acceleration
+yt-dlp -N "$CONCURRENT" \
+       --no-warnings \
+       --progress \
+       -P "$DEST_DIR" \
+       -o "%(title)s.%(ext)s" \
+       "${YTDL_OPTS[@]}" \
+       "$URL"
+
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo ""
+    echo -e "${GREEN}✔${NC} ${BOLD}Download completed successfully!${NC} Saved to: ${CYAN}$DEST_DIR${NC}"
+    
+    # Desktop Notification
+    if command -v notify-send >/dev/null 2>&1; then
+        if [ -n "$DBUS_SESSION_BUS_ADDRESS" ]; then
+            notify-send -i freedownloadmanager -a "Free Download Manager" "Media Download Complete" "Saved to $DEST_DIR" 2>/dev/null || true
+        elif [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+            local_uid=$(id -u "$SUDO_USER" 2>/dev/null || true)
+            if [ -S "/run/user/$local_uid/bus" ]; then
+                sudo -u "$SUDO_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$local_uid/bus" \
+                    notify-send -i freedownloadmanager -a "Free Download Manager" "Media Download Complete" "Saved to $DEST_DIR" 2>/dev/null || true
+            fi
+        fi
+    fi
+else
+    echo -e "${RED}Error:${NC} Download failed with error code $EXIT_CODE."
+    exit $EXIT_CODE
+fi
+EOF
+$SUDO cp "$TMP_DIR/fdm_dl_cli" /usr/local/bin/fdm-dl
+$SUDO cp "$TMP_DIR/fdm_dl_cli" /usr/local/bin/fdm-video
+$SUDO chmod 755 /usr/local/bin/fdm-dl /usr/local/bin/fdm-video
+
 # Install High-Resolution Icons
 if [ -f /opt/freedownloadmanager/icon.png ]; then
     $SUDO mkdir -p /usr/share/icons/hicolor/128x128/apps /usr/share/pixmaps 2>/dev/null || true
@@ -739,12 +887,28 @@ _fdm_doctor_complete() {
     fi
 }
 complete -F _fdm_doctor_complete fdm-doctor
+
+_fdm_dl_complete() {
+    local cur opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    opts="--help -h --audio-only -a --quality -q --output -o --connections -c"
+
+    if [[ ${cur} == -* ]] ; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+}
+complete -F _fdm_dl_complete fdm-dl
+complete -F _fdm_dl_complete fdm-video
 EOF
 $SUDO mkdir -p /usr/share/bash-completion/completions 2>/dev/null || true
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-update
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-doctor
-$SUDO chmod 644 /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update /usr/share/bash-completion/completions/fdm-doctor 2>/dev/null || true
+$SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-dl
+$SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-video
+$SUDO chmod 644 /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update /usr/share/bash-completion/completions/fdm-doctor /usr/share/bash-completion/completions/fdm-dl /usr/share/bash-completion/completions/fdm-video 2>/dev/null || true
 
 # DNF Integration Hook (runs fdm-update alongside sudo dnf update / upgrade)
 cat << 'EOF' > "$TMP_DIR/fdm_dnf_hook.sh"

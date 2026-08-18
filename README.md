@@ -95,10 +95,28 @@ After running the installer, install the official FDM extension in your browser:
 | `fdm &` | Launch FDM in background |
 | `fdm --hidden` | Launch FDM silently minimized to the system tray |
 | `fdm <url>` | Pass a direct download link or magnet URI to FDM |
+| `fdm-dl <url>` | Multi-threaded CLI media downloader (YouTube, X/Twitter, TikTok, etc.) |
 | `fdm-update` | Check for upstream releases and update FDM in-place |
 | `fdm-update --check` | Check if a newer version is available without downloading |
 | `fdm-doctor` | Run comprehensive system integration health checks |
 | `fdm-doctor --fix` | Instantly synchronize manifests & permissions for newly installed browsers |
+
+---
+
+## 🎬 Accelerated CLI Media Downloader (`fdm-dl`)
+
+Download videos and audio directly from the terminal with 8 parallel accelerated connection chunks to `~/Downloads`:
+
+```bash
+# Download highest quality video (4K/1080p + audio)
+fdm-dl https://www.youtube.com/watch?v=dQw4w9WgXcQ
+
+# Extract audio only (High quality MP3)
+fdm-dl -a https://www.youtube.com/watch?v=dQw4w9WgXcQ
+
+# Specify max resolution (e.g. 1080p, 720p)
+fdm-dl -q 1080p https://twitter.com/user/status/123456789
+```
 
 ---
 
