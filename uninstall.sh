@@ -35,8 +35,8 @@ Options:
 
 Description:
   Completely removes Free Download Manager binaries (/opt/freedownloadmanager),
-  desktop entry, app icons, CLI wrapper (/usr/local/bin/fdm), and all browser
-  Native Messaging manifests and Flatpak bridges across all supported browsers.
+  desktop entry, app icons, CLI wrappers (/usr/local/bin/fdm, fdm-update, fdm-doctor),
+  autostart entries, and all browser Native Messaging manifests across all supported browsers.
 EOF
     exit 0
 }
@@ -86,11 +86,13 @@ pkill -x fdm 2>/dev/null || true
 info "Removing Free Download Manager..."
 $SUDO rm -rf /opt/freedownloadmanager
 $SUDO rm -f /usr/share/applications/freedownloadmanager.desktop
-$SUDO rm -f /usr/local/bin/fdm
+$SUDO rm -f /usr/local/bin/fdm /usr/local/bin/fdm-update /usr/local/bin/fdm-doctor
 $SUDO rm -f /usr/share/icons/hicolor/128x128/apps/freedownloadmanager.png /usr/share/pixmaps/freedownloadmanager.png 2>/dev/null || true
 $SUDO rm -f /usr/lib64/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json /usr/lib/mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json 2>/dev/null || true
 $SUDO rm -f /usr/lib64/mozilla/native-messaging-hosts/com.vms.fdm.json /usr/lib/mozilla/native-messaging-hosts/com.vms.fdm.json 2>/dev/null || true
 $SUDO find /etc -name "*freedownloadmanager*.json" -delete 2>/dev/null || true
+
+rm -f "$USER_HOME/.config/autostart/freedownloadmanager.desktop" 2>/dev/null || true
 
 find "$USER_HOME/.config" "$USER_HOME/.mozilla" "$USER_HOME/.librewolf" "$USER_HOME/.floorp" "$USER_HOME/.waterfox" "$USER_HOME/.zen" "$USER_HOME/.var/app" -name "*freedownloadmanager*.json" -delete 2>/dev/null || true
 find "$USER_HOME/.config" "$USER_HOME/.mozilla" "$USER_HOME/.librewolf" "$USER_HOME/.floorp" "$USER_HOME/.waterfox" "$USER_HOME/.zen" "$USER_HOME/.var/app" -name "com.vms.fdm.json" -delete 2>/dev/null || true

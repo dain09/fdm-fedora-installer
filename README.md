@@ -16,7 +16,7 @@ While Free Download Manager is available on Flathub, sandboxing limitations caus
 2. **Missing System Tray:** The application closes completely instead of minimizing to the background tray on GNOME and KDE Plasma.
 3. **Missing Torrent / Magnet Associations:** Magnet links and `.torrent` files fail to open in FDM by default.
 
-This repository provides an automated installation suite that extracts the official native binaries directly to `/opt/freedownloadmanager`, sets up **Native Messaging Hosts** and **Flatpak Sandbox Bridges** across all major browsers, configures system tray integration, deploys high-resolution application icons, creates a Wayland/HiDPI CLI wrapper, and registers MIME handlers.
+This repository provides an automated installation suite that extracts the official native binaries directly to `/opt/freedownloadmanager`, sets up **Native Messaging Hosts** and **Flatpak Sandbox Bridges** across all major browsers, configures system tray integration, deploys high-resolution application icons, creates a Wayland/HiDPI CLI wrapper with helper tools (`fdm`, `fdm-update`, `fdm-doctor`), and registers MIME handlers.
 
 ---
 
@@ -27,6 +27,16 @@ Run the following command in your terminal:
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/install.sh)"
 ```
+
+### Optional Flags:
+* **Enable silent autostart on system boot (minimized to tray):**
+  ```bash
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/install.sh)" -- --autostart
+  ```
+* **Run system diagnostics only:**
+  ```bash
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/install.sh)" -- --doctor
+  ```
 
 <details>
 <summary><b>Alternative: Manual Installation via Git</b></summary>
@@ -46,16 +56,18 @@ chmod +x install.sh update.sh uninstall.sh
 
 * **📦 Native Extraction & Integrity Verification:** Extracts official `.deb` binaries directly into `/opt/freedownloadmanager` without requiring `dpkg` or `apt`.
 * **🌐 Universal Browser Integration (Native & Flatpak):** Configures Native Messaging manifests (`org.freedownloadmanager.fdm5.cnh` & `com.vms.fdm`) and automated sandbox bridges across:
-  * **Google Chrome**, **Chromium**, & **Beta/Dev/Unstable** (Native & Flatpak)
+  * **Google Chrome**, **Chromium**, **Thorium**, & **Beta/Dev/Unstable** (Native & Flatpak)
   * **Brave Browser**, **Brave Origin**, & **Beta/Nightly** (Native & Flatpak)
   * **Microsoft Edge** & **Edge Dev/Beta** (Native & Flatpak)
   * **Vivaldi** & **Vivaldi Snapshot** (Native & Flatpak)
   * **Opera** & **Opera Beta/Developer** (Native & Flatpak)
   * **Mozilla Firefox**, **LibreWolf**, **Floorp**, **Waterfox** & **Zen Browser** (Native & Flatpak)
 * **💻 HiDPI & Wayland CLI Wrapper:** Creates `/usr/local/bin/fdm` with automatic screen scaling (`QT_AUTO_SCREEN_SCALE_FACTOR=1`) and adaptive Wayland/X11 rendering.
+* **🛠️ Standalone CLI Helpers:** Installs `fdm-update` for one-command updates and `fdm-doctor` for instant system diagnostics.
 * **🧩 Full Desktop & System Tray Integration:**
   * **GNOME:** Installs and verifies `gnome-shell-extension-appindicator` and `libappindicator-gtk3`.
   * **KDE Plasma:** Natively integrates with KDE's `StatusNotifierItem` and automatically refreshes `kbuildsycoca` application caches.
+  * **Desktop Actions:** Right-click context menu in dock/taskbar with "Start Minimized in Tray" option.
 * **🧲 Default URL & MIME Handlers:** Registers FDM with `xdg-mime` to handle `application/x-bittorrent` files and `x-scheme-handler/magnet` links.
 * **⚡ Smart Bandwidth Optimization:** Both `install.sh` and `update.sh` probe upstream release metadata (~300KB) and skip redundant 40MB downloads if your system is already on the latest version.
 * **🩺 Built-in System Doctor (`--doctor`):** Comprehensive diagnostic tool to audit binary executables, browser manifests, MIME handlers, and desktop environment health.
@@ -66,7 +78,7 @@ chmod +x install.sh update.sh uninstall.sh
 
 After running the installer, install the official FDM extension in your browser:
 
-* **Chromium Browsers (Chrome, Brave, Edge, Vivaldi, Opera):**  
+* **Chromium Browsers (Chrome, Brave, Edge, Vivaldi, Opera, Thorium):**  
   Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/free-download-manager-chr/ahmpjcflkgiildlgicmcieglgoilbfdp).
 * **Firefox Family (Firefox, LibreWolf, Floorp, Waterfox, Zen):**  
   Install from [Firefox Add-ons (AMO)](https://addons.mozilla.org/firefox/addon/free-download-manager-addon/).
@@ -75,34 +87,31 @@ After running the installer, install the official FDM extension in your browser:
 
 ---
 
-## 💻 CLI Usage
+## 💻 CLI Commands
 
-You can launch FDM, pass URLs, or download torrents directly from your terminal:
-
-```bash
-# Launch FDM in background
-fdm &
-
-# Download a direct file link
-fdm https://example.com/file.zip
-
-# Open a BitTorrent magnet link
-fdm "magnet:?xt=urn:btih:..."
-```
+| Command | Description |
+| :--- | :--- |
+| `fdm` | Launch Free Download Manager GUI |
+| `fdm &` | Launch FDM in background |
+| `fdm --hidden` | Launch FDM silently minimized to the system tray |
+| `fdm <url>` | Pass a direct download link or magnet URI to FDM |
+| `fdm-update` | Check for upstream releases and update FDM in-place |
+| `fdm-update --check` | Check if a newer version is available without downloading |
+| `fdm-doctor` | Run comprehensive system integration health checks |
 
 ---
 
 ## 🩺 System Doctor Diagnosis
 
-Audit your installation health at any time:
+Audit your installation health at any time by running:
 
 ```bash
-./install.sh --doctor
+fdm-doctor
 ```
 
-Or via one-liner:
+Or via script:
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/install.sh)" -- --doctor
+./install.sh --doctor
 ```
 
 Example diagnostic report:
@@ -111,15 +120,18 @@ Example diagnostic report:
    Free Download Manager (FDM) - System Doctor Report   
 ========================================================
 
-[Core Binaries]
+[Core Binaries & CLI Tools]
   [✓] FDM binary: /opt/freedownloadmanager/fdm (v6.34.4.6974)
   [✓] Native messaging host: /opt/freedownloadmanager/wenativehost
   [✓] CLI Command wrapper: /usr/local/bin/fdm
+  [✓] CLI Updater command: /usr/local/bin/fdm-update
+  [✓] CLI Doctor command: /usr/local/bin/fdm-doctor
 
 [Desktop & MIME Integration]
   [✓] Desktop launcher: /usr/share/applications/freedownloadmanager.desktop
   [✓] Torrent MIME handler: freedownloadmanager.desktop
   [✓] Magnet MIME handler: freedownloadmanager.desktop
+  [✓] Silent Autostart on boot: enabled (~/.config/autostart/freedownloadmanager.desktop)
 
 [Browser Native Messaging Manifests (Native & Flatpak)]
   [✓] Brave-Origin (Native): configured
@@ -137,27 +149,22 @@ Example diagnostic report:
 
 ## 🔄 Updating FDM
 
-To update FDM binaries to the latest release:
+To update FDM to the latest release:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/update.sh)"
+fdm-update
 ```
 
-### Options:
-* **Check for updates without downloading:**
-  ```bash
-  ./update.sh --check
-  ```
-* **Force re-download and reinstallation:**
-  ```bash
-  ./update.sh --force
-  ```
+Or check without downloading:
+```bash
+fdm-update --check
+```
 
 ---
 
 ## 🗑️ Uninstallation
 
-To completely remove Free Download Manager, its desktop entry, icons, CLI wrapper, and all browser manifests:
+To completely remove Free Download Manager, its desktop entry, icons, CLI wrappers, autostart entries, and all browser manifests:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/uninstall.sh)"

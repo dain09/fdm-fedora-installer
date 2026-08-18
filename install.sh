@@ -53,6 +53,7 @@ CHROMIUM_NATIVE_DIRS=(
     "$USER_HOME/.config/google-chrome-beta/NativeMessagingHosts"
     "$USER_HOME/.config/google-chrome-unstable/NativeMessagingHosts"
     "$USER_HOME/.config/chromium/NativeMessagingHosts"
+    "$USER_HOME/.config/thorium/NativeMessagingHosts"
     "$USER_HOME/.config/microsoft-edge/NativeMessagingHosts"
     "$USER_HOME/.config/microsoft-edge-beta/NativeMessagingHosts"
     "$USER_HOME/.config/microsoft-edge-dev/NativeMessagingHosts"
@@ -102,6 +103,7 @@ Options:
   -h, --help       Show this help message and exit
   -d, --doctor     Run system diagnostic report and verify installation health
   -f, --force      Force full package re-download even if already up to date
+  -a, --autostart  Enable silent autostart on system boot (minimized to tray)
 
 Arguments:
   [path/to/fdm.deb] Optional local debian package file to install offline
@@ -122,7 +124,7 @@ run_doctor() {
     echo ""
 
     # 1. Core Binaries
-    echo -e "${CYAN}[Core Binaries]${NC}"
+    echo -e "${CYAN}[Core Binaries & CLI Tools]${NC}"
     VERSION_STR=""
     if [ -f /opt/freedownloadmanager/.version ]; then
         VERSION_STR=" (v$(cat /opt/freedownloadmanager/.version | tr -d '[:space:]'))"
@@ -144,6 +146,14 @@ run_doctor() {
         echo -e "  ${GREEN}[✓]${NC} CLI Command wrapper: /usr/local/bin/fdm"
     else
         echo -e "  ${YELLOW}[-]${NC} CLI Command wrapper not installed"
+    fi
+
+    if [ -f /usr/local/bin/fdm-update ] && [ -x /usr/local/bin/fdm-update ]; then
+        echo -e "  ${GREEN}[✓]${NC} CLI Updater command: /usr/local/bin/fdm-update"
+    fi
+
+    if [ -f /usr/local/bin/fdm-doctor ] && [ -x /usr/local/bin/fdm-doctor ]; then
+        echo -e "  ${GREEN}[✓]${NC} CLI Doctor command: /usr/local/bin/fdm-doctor"
     fi
     echo ""
 
@@ -167,6 +177,12 @@ run_doctor() {
         echo -e "  ${GREEN}[✓]${NC} Magnet MIME handler: $MAGNET_HANDLER"
     else
         echo -e "  ${YELLOW}[-]${NC} Magnet MIME handler: ${MAGNET_HANDLER:-None}"
+    fi
+
+    if [ -f "$USER_HOME/.config/autostart/freedownloadmanager.desktop" ]; then
+        echo -e "  ${GREEN}[✓]${NC} Silent Autostart on boot: enabled (~/.config/autostart/freedownloadmanager.desktop)"
+    else
+        echo -e "  ${CYAN}[i]${NC} Silent Autostart on boot: disabled (run ./install.sh -a to enable)"
     fi
     echo ""
 
@@ -217,6 +233,7 @@ run_doctor() {
 }
 
 FORCE_DOWNLOAD=false
+ENABLE_AUTOSTART=false
 LOCAL_DEB=""
 
 for arg in "$@"; do
@@ -229,6 +246,9 @@ for arg in "$@"; do
             ;;
         -f|--force)
             FORCE_DOWNLOAD=true
+            ;;
+        -a|--autostart)
+            ENABLE_AUTOSTART=true
             ;;
         *.deb)
             if [ -f "$arg" ]; then
@@ -339,6 +359,21 @@ EOF
 $SUDO cp "$TMP_DIR/fdm_cli" /usr/local/bin/fdm
 $SUDO chmod 755 /usr/local/bin/fdm
 
+# Install standalone CLI helper tools (fdm-update and fdm-doctor)
+cat << 'EOF' > "$TMP_DIR/fdm_update_cli"
+#!/usr/bin/env bash
+exec bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/update.sh)" -- "$@"
+EOF
+$SUDO cp "$TMP_DIR/fdm_update_cli" /usr/local/bin/fdm-update
+$SUDO chmod 755 /usr/local/bin/fdm-update
+
+cat << 'EOF' > "$TMP_DIR/fdm_doctor_cli"
+#!/usr/bin/env bash
+exec bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/install.sh)" -- --doctor "$@"
+EOF
+$SUDO cp "$TMP_DIR/fdm_doctor_cli" /usr/local/bin/fdm-doctor
+$SUDO chmod 755 /usr/local/bin/fdm-doctor
+
 # Install High-Resolution Icons
 if [ -f /opt/freedownloadmanager/icon.png ]; then
     $SUDO mkdir -p /usr/share/icons/hicolor/128x128/apps /usr/share/pixmaps 2>/dev/null || true
@@ -346,7 +381,7 @@ if [ -f /opt/freedownloadmanager/icon.png ]; then
     $SUDO cp /opt/freedownloadmanager/icon.png /usr/share/pixmaps/freedownloadmanager.png
 fi
 
-# Create standardized freedesktop .desktop launcher
+# Create standardized freedesktop .desktop launcher with Actions
 cat << 'EOF' > "$TMP_DIR/freedownloadmanager.desktop"
 [Desktop Entry]
 Name=Free Download Manager
@@ -361,9 +396,34 @@ Categories=Network;FileTransfer;P2P;Qt;
 StartupNotify=true
 StartupWMClass=fdm
 MimeType=application/x-bittorrent;x-scheme-handler/magnet;
+Actions=StartHidden;
+
+[Desktop Action StartHidden]
+Name=Start Minimized in Tray
+Exec=/usr/local/bin/fdm --hidden
 EOF
 $SUDO cp "$TMP_DIR/freedownloadmanager.desktop" /usr/share/applications/freedownloadmanager.desktop
 $SUDO chmod 644 /usr/share/applications/freedownloadmanager.desktop
+
+# Configure Autostart if requested
+if [ "$ENABLE_AUTOSTART" = "true" ]; then
+    mkdir -p "$USER_HOME/.config/autostart" 2>/dev/null || true
+    cat << 'EOF' > "$USER_HOME/.config/autostart/freedownloadmanager.desktop"
+[Desktop Entry]
+Type=Application
+Name=Free Download Manager
+Comment=Start Free Download Manager minimized in system tray
+Exec=/usr/local/bin/fdm --hidden
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+StartupNotify=false
+Terminal=false
+Icon=freedownloadmanager
+EOF
+    chmod 644 "$USER_HOME/.config/autostart/freedownloadmanager.desktop"
+    success "Silent autostart on boot enabled (~/.config/autostart/freedownloadmanager.desktop)"
+fi
 
 # Refresh desktop database and icon caches across GNOME and KDE
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -608,4 +668,5 @@ info "[6/6] Finalizing setup..."
 echo "--------------------------------------------------------"
 success "Free Download Manager has been installed successfully!"
 echo -e "You can launch it from your applications menu or type '${BOLD}fdm${NC}' in your terminal."
+echo -e "CLI helper commands: '${BOLD}fdm-update${NC}' and '${BOLD}fdm-doctor${NC}'."
 echo -e "Please restart your browser to activate the extension."

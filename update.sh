@@ -170,6 +170,21 @@ EOF
 $SUDO cp "$TMP_DIR/fdm_cli" /usr/local/bin/fdm
 $SUDO chmod 755 /usr/local/bin/fdm
 
+# Install standalone CLI helper tools (fdm-update and fdm-doctor)
+cat << 'EOF' > "$TMP_DIR/fdm_update_cli"
+#!/usr/bin/env bash
+exec bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/update.sh)" -- "$@"
+EOF
+$SUDO cp "$TMP_DIR/fdm_update_cli" /usr/local/bin/fdm-update
+$SUDO chmod 755 /usr/local/bin/fdm-update
+
+cat << 'EOF' > "$TMP_DIR/fdm_doctor_cli"
+#!/usr/bin/env bash
+exec bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/install.sh)" -- --doctor "$@"
+EOF
+$SUDO cp "$TMP_DIR/fdm_doctor_cli" /usr/local/bin/fdm-doctor
+$SUDO chmod 755 /usr/local/bin/fdm-doctor
+
 # Install High-Resolution Icons
 if [ -f /opt/freedownloadmanager/icon.png ]; then
     $SUDO mkdir -p /usr/share/icons/hicolor/128x128/apps /usr/share/pixmaps 2>/dev/null || true
@@ -192,6 +207,11 @@ Categories=Network;FileTransfer;P2P;Qt;
 StartupNotify=true
 StartupWMClass=fdm
 MimeType=application/x-bittorrent;x-scheme-handler/magnet;
+Actions=StartHidden;
+
+[Desktop Action StartHidden]
+Name=Start Minimized in Tray
+Exec=/usr/local/bin/fdm --hidden
 EOF
 $SUDO cp "$TMP_DIR/freedownloadmanager.desktop" /usr/share/applications/freedownloadmanager.desktop
 $SUDO chmod 644 /usr/share/applications/freedownloadmanager.desktop
