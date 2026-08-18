@@ -885,18 +885,25 @@ fi
 
 # Auto-detect available browser cookies on the system to bypass YouTube bot checks
 COOKIE_OPTS=()
-if [ -d "$TARGET_HOME/.mozilla/firefox" ]; then
-    COOKIE_OPTS=(--cookies-from-browser firefox)
-elif [ -d "$TARGET_HOME/.config/BraveSoftware/Brave-Browser" ]; then
-    COOKIE_OPTS=(--cookies-from-browser brave)
-elif [ -d "$TARGET_HOME/.config/google-chrome" ]; then
-    COOKIE_OPTS=(--cookies-from-browser chrome)
-elif [ -d "$TARGET_HOME/.config/chromium" ]; then
-    COOKIE_OPTS=(--cookies-from-browser chromium)
-elif [ -d "$TARGET_HOME/.zen" ]; then
-    COOKIE_OPTS=(--cookies-from-browser zen)
-elif [ -d "$TARGET_HOME/.librewolf" ]; then
-    COOKIE_OPTS=(--cookies-from-browser librewolf)
+COOKIE_BROWSER=""
+if find "$TARGET_HOME/.mozilla/firefox" "$TARGET_HOME/.config/mozilla/firefox" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
+    COOKIE_BROWSER="firefox"
+elif find "$TARGET_HOME/.config/google-chrome" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_BROWSER="chrome"
+elif find "$TARGET_HOME/.config/chromium" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_BROWSER="chromium"
+elif find "$TARGET_HOME/.config/BraveSoftware/Brave-Browser" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_BROWSER="brave"
+elif find "$TARGET_HOME/.config/microsoft-edge" -name "Cookies" 2>/dev/null | grep -q .; then
+    COOKIE_BROWSER="edge"
+elif find "$TARGET_HOME/.zen" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
+    COOKIE_BROWSER="zen"
+elif find "$TARGET_HOME/.librewolf" -name "cookies.sqlite" 2>/dev/null | grep -q .; then
+    COOKIE_BROWSER="librewolf"
+fi
+
+if [ -n "$COOKIE_BROWSER" ]; then
+    COOKIE_OPTS=(--cookies-from-browser "$COOKIE_BROWSER")
 fi
 
 echo -e "${CYAN}==>${NC} ${BOLD}Analyzing media stream metadata...${NC}"
