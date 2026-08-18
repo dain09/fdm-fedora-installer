@@ -629,7 +629,7 @@ EOF
 $SUDO cp "$TMP_DIR/fdm_cli" /usr/local/bin/fdm
 $SUDO chmod 755 /usr/local/bin/fdm
 
-# Install standalone CLI helper tools (fdm-update, fdm-doctor, fdm-video)
+# Install standalone CLI helper tools (fdm-update and fdm-doctor)
 cat << 'EOF' > "$TMP_DIR/fdm_update_cli"
 #!/usr/bin/env bash
 exec bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/update.sh)" -- "$@"
@@ -647,106 +647,6 @@ fi
 EOF
 $SUDO cp "$TMP_DIR/fdm_doctor_cli" /usr/local/bin/fdm-doctor
 $SUDO chmod 755 /usr/local/bin/fdm-doctor
-
-cat << 'EOF' > "$TMP_DIR/fdm_video_cli"
-#!/usr/bin/env bash
-# Free Download Manager Video Stream Downloader Helper
-# Requires: yt-dlp, fdm
-set -e
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-YELLOW='\033[1;33m'
-BOLD='\033[1m'
-NC='\033[0m'
-
-show_help() {
-    echo -e "${CYAN}${BOLD}Free Download Manager - Video Downloader Accelerator${NC}"
-    echo "Usage:"
-    echo "  fdm-video [options] <URL>"
-    echo ""
-    echo "Options:"
-    echo "  -h, --help        Show this help message"
-    echo "  -a, --audio-only  Extract and download best audio only"
-    echo "  -f, --format FMT  Custom stream format selector (passed to yt-dlp)"
-    echo ""
-    echo "Examples:"
-    echo "  fdm-video https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    echo "  fdm-video --audio-only https://soundcloud.com/artist/track"
-    exit 0
-}
-
-if [ "$#" -eq 0 ]; then
-    show_help
-fi
-
-AUDIO_ONLY=false
-CUSTOM_FORMAT=""
-URL=""
-
-while [ "$#" -gt 0 ]; do
-    case "$1" in
-        -h|--help)
-            show_help
-            ;;
-        -a|--audio|--audio-only)
-            AUDIO_ONLY=true
-            shift
-            ;;
-        -f|--format)
-            CUSTOM_FORMAT="$2"
-            shift 2
-            ;;
-        *)
-            URL="$1"
-            shift
-            ;;
-    esac
-done
-
-if [ -z "$URL" ]; then
-    echo -e "${RED}Error:${NC} No video URL provided."
-    exit 1
-fi
-
-if ! command -v yt-dlp >/dev/null 2>&1; then
-    echo -e "${YELLOW}==>${NC} ${BOLD}yt-dlp is required to extract high-speed video streams.${NC}"
-    echo -e "Installing via DNF: ${CYAN}sudo dnf install -y yt-dlp${NC}..."
-    sudo dnf install -y yt-dlp || {
-        echo -e "${RED}Error:${NC} Failed to install yt-dlp. Please install it with: sudo dnf install yt-dlp"
-        exit 1
-    }
-fi
-
-if [ -n "$CUSTOM_FORMAT" ]; then
-    FORMAT_ARG="-f $CUSTOM_FORMAT"
-elif [ "$AUDIO_ONLY" = "true" ]; then
-    FORMAT_ARG="-f bestaudio/best"
-else
-    FORMAT_ARG="-f b/bestvideo+bestaudio/best"
-fi
-
-echo -e "${CYAN}==>${NC} ${BOLD}Resolving video stream metadata with yt-dlp...${NC}"
-TITLE=$(yt-dlp --get-title "$URL" 2>/dev/null || echo "Video Download")
-echo -e "${GREEN}==>${NC} ${BOLD}Title:${NC} $TITLE"
-
-# shellcheck disable=SC2086
-STREAM_URLS=$(yt-dlp --get-url $FORMAT_ARG "$URL" 2>/dev/null || true)
-
-if [ -z "$STREAM_URLS" ]; then
-    echo -e "${RED}Error:${NC} Could not extract direct video streams for: $URL"
-    exit 1
-fi
-
-echo -e "${CYAN}==>${NC} ${BOLD}Sending stream to Free Download Manager...${NC}"
-for S_URL in $STREAM_URLS; do
-    /usr/local/bin/fdm "$S_URL" >/dev/null 2>&1 &
-done
-echo -e "${GREEN}✔${NC} ${BOLD}Download dispatched to Free Download Manager!${NC}"
-EOF
-$SUDO cp "$TMP_DIR/fdm_video_cli" /usr/local/bin/fdm-video
-$SUDO chmod 755 /usr/local/bin/fdm-video
 
 # Install High-Resolution Icons
 if [ -f /opt/freedownloadmanager/icon.png ]; then
@@ -839,26 +739,12 @@ _fdm_doctor_complete() {
     fi
 }
 complete -F _fdm_doctor_complete fdm-doctor
-
-_fdm_video_complete() {
-    local cur opts
-    COMPREPLY=()
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    opts="--help -h --audio-only -a --format -f"
-
-    if [[ ${cur} == -* ]] ; then
-        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-        return 0
-    fi
-}
-complete -F _fdm_video_complete fdm-video
 EOF
 $SUDO mkdir -p /usr/share/bash-completion/completions 2>/dev/null || true
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-update
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-doctor
-$SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-video
-$SUDO chmod 644 /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update /usr/share/bash-completion/completions/fdm-doctor /usr/share/bash-completion/completions/fdm-video 2>/dev/null || true
+$SUDO chmod 644 /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update /usr/share/bash-completion/completions/fdm-doctor 2>/dev/null || true
 
 # DNF Integration Hook (runs fdm-update alongside sudo dnf update / upgrade)
 cat << 'EOF' > "$TMP_DIR/fdm_dnf_hook.sh"
@@ -1165,7 +1051,6 @@ echo -e "${GREEN}${BOLD}├─────────────────�
 echo -e "  ${BOLD}• App Launcher :${NC} Search 'Free Download Manager' in your menu"
 echo -e "  ${BOLD}• CLI Launch   :${NC} ${CYAN}fdm &${NC} or ${CYAN}fdm <url>${NC}"
 echo -e "  ${BOLD}• Update Tool  :${NC} ${CYAN}fdm-update${NC} (or ${CYAN}fdm-update --check${NC})"
-echo -e "  ${BOLD}• Video Helper :${NC} ${CYAN}fdm-video <url>${NC}"
 echo -e "  ${BOLD}• Health Audit :${NC} ${CYAN}fdm-doctor${NC} (or ${CYAN}fdm-doctor --fix${NC})"
 if [ "$ENABLE_AUTOSTART" = "true" ]; then
     echo -e "  ${BOLD}• Autostart    :${NC} ${GREEN}Enabled (silent tray on boot)${NC}"
