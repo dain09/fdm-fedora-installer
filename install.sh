@@ -68,11 +68,14 @@ show_help() {
 Free Download Manager (FDM) Native Installer for Fedora Linux
 
 Usage:
-  ./install.sh [options]
+  ./install.sh [options] [path/to/fdm.deb]
 
 Options:
   -h, --help       Show this help message and exit
   -d, --doctor     Run system diagnostic report and verify installation health
+
+Arguments:
+  [path/to/fdm.deb] Optional local debian package file to install offline
 
 Description:
   Installs Free Download Manager native binaries directly to /opt/freedownloadmanager,
@@ -118,15 +121,15 @@ run_doctor() {
     fi
 
     TORRENT_HANDLER=$(xdg-mime query default application/x-bittorrent 2>/dev/null || true)
-    if [ "$TORRENT_HANDLER" = "freedownloadmanager.desktop" ]; then
-        echo -e "  ${GREEN}[✓]${NC} Torrent MIME handler: freedownloadmanager.desktop"
+    if [[ "$TORRENT_HANDLER" =~ freedownloadmanager ]]; then
+        echo -e "  ${GREEN}[✓]${NC} Torrent MIME handler: $TORRENT_HANDLER"
     else
         echo -e "  ${YELLOW}[-]${NC} Torrent MIME handler: ${TORRENT_HANDLER:-None}"
     fi
 
     MAGNET_HANDLER=$(xdg-mime query default x-scheme-handler/magnet 2>/dev/null || true)
-    if [ "$MAGNET_HANDLER" = "freedownloadmanager.desktop" ]; then
-        echo -e "  ${GREEN}[✓]${NC} Magnet MIME handler: freedownloadmanager.desktop"
+    if [[ "$MAGNET_HANDLER" =~ freedownloadmanager ]]; then
+        echo -e "  ${GREEN}[✓]${NC} Magnet MIME handler: $MAGNET_HANDLER"
     else
         echo -e "  ${YELLOW}[-]${NC} Magnet MIME handler: ${MAGNET_HANDLER:-None}"
     fi
@@ -164,14 +167,25 @@ run_doctor() {
     exit 0
 }
 
-case "${1:-}" in
-    -h|--help)
-        show_help
-        ;;
-    -d|--doctor|--status|--check)
-        run_doctor
-        ;;
-esac
+LOCAL_DEB=""
+for arg in "$@"; do
+    case "$arg" in
+        -h|--help)
+            show_help
+            ;;
+        -d|--doctor|--status|--check)
+            run_doctor
+            ;;
+        *.deb)
+            if [ -f "$arg" ]; then
+                LOCAL_DEB=$(realpath "$arg")
+            else
+                error "Specified local package '$arg' not found."
+                exit 1
+            fi
+            ;;
+    esac
+done
 
 # 3. Check for package manager (Fedora Workstation vs Fedora Atomic/Silverblue)
 info "[1/6] Installing system dependencies..."
@@ -187,12 +201,17 @@ fi
 # Gracefully terminate running FDM instances before extraction
 pkill -x fdm 2>/dev/null || true
 
-info "[2/6] Downloading and extracting FDM (.deb)..."
+info "[2/6] Extracting Free Download Manager package..."
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT INT TERM
 cd "$TMP_DIR" || exit 1
 
-curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+if [ -n "$LOCAL_DEB" ]; then
+    info "Using local deb package: $LOCAL_DEB"
+    cp "$LOCAL_DEB" fdm.deb
+else
+    curl -L --retry 3 --retry-delay 2 -o fdm.deb "https://files2.freedownloadmanager.org/6/latest/freedownloadmanager.deb"
+fi
 
 # Verify archive integrity
 if ! ar t fdm.deb >/dev/null 2>&1; then
@@ -213,8 +232,12 @@ EOF
 $SUDO cp "$TMP_DIR/fdm_cli" /usr/local/bin/fdm
 $SUDO chmod 755 /usr/local/bin/fdm
 
+# Refresh desktop database and icon caches
 if command -v update-desktop-database >/dev/null 2>&1; then
     $SUDO update-desktop-database || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    $SUDO gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
 fi
 
 info "[3/6] Setting up Native Messaging Hosts..."

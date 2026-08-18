@@ -68,5 +68,8 @@ find "$USER_HOME/.config" "$USER_HOME/.mozilla" "$USER_HOME/.librewolf" "$USER_H
 if command -v update-desktop-database >/dev/null 2>&1; then
     $SUDO update-desktop-database || true
 fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    $SUDO gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
 
 success "Free Download Manager has been completely removed."

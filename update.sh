@@ -92,9 +92,12 @@ EOF
 $SUDO cp "$TMP_DIR/fdm_cli" /usr/local/bin/fdm
 $SUDO chmod 755 /usr/local/bin/fdm
 
-# Run update-desktop-database safely if available
+# Run update-desktop-database and icon cache refresh safely if available
 if command -v update-desktop-database >/dev/null 2>&1; then
     $SUDO update-desktop-database || true
+fi
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    $SUDO gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
 fi
 
 success "Free Download Manager updated successfully!"
