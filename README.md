@@ -105,17 +105,37 @@ After running the installer, install the official FDM extension in your browser:
 
 ## 🎬 Accelerated CLI Media Downloader (`fdm-dl`)
 
-Download videos and audio directly from the terminal with 8 parallel accelerated connection chunks to `~/Downloads`:
+Download videos and audio directly from the terminal with 8 parallel accelerated connection chunks to `~/Downloads`, including live stream metadata probing, estimated file size, and interactive confirmation:
 
 ```bash
-# Download highest quality video (4K/1080p + audio)
+# Interactive download with metadata preview & confirmation (4K/1080p + audio)
 fdm-dl https://www.youtube.com/watch?v=dQw4w9WgXcQ
 
-# Extract audio only (High quality MP3)
+# Extract audio only (High-quality MP3)
 fdm-dl -a https://www.youtube.com/watch?v=dQw4w9WgXcQ
+
+# Skip confirmation prompt (-y / --yes)
+fdm-dl -y https://www.youtube.com/watch?v=dQw4w9WgXcQ
 
 # Specify max resolution (e.g. 1080p, 720p)
 fdm-dl -q 1080p https://twitter.com/user/status/123456789
+```
+
+**Example interactive summary card:**
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  🎬 Free Download Manager - Media Download Summary           │
+├──────────────────────────────────────────────────────────────┤
+  • Title       : Rick Astley - Never Gonna Give You Up        
+  • Source/Host : Rick Astley                                  
+  • Duration    : 3:33                                         
+  • Format/Mode : Audio Only (High-Quality MP3)                
+  • Est. Size   : 11.28 MB                                     
+  • Destination : /home/dain/Downloads                         
+  • Acceleration: 8 Parallel Connections                       
+└──────────────────────────────────────────────────────────────┘
+
+Proceed with accelerated download? [Y/n]
 ```
 
 ---

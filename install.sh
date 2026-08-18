@@ -533,7 +533,7 @@ show_banner
 
 # 3. Check for package manager & desktop environment
 info "[1/6] Installing system dependencies..."
-CORE_DEPS="binutils curl desktop-file-utils xdg-utils bubblewrap libxcb libxkbcommon-x11 libnotify"
+CORE_DEPS="binutils curl desktop-file-utils xdg-utils bubblewrap libxcb libxkbcommon-x11 libnotify yt-dlp nodejs"
 
 # Add GNOME AppIndicator extension only if not strictly KDE Plasma
 if [[ "${XDG_CURRENT_DESKTOP:-}" =~ [Kk][Dd][Ee]|[Pp][Ll][Aa][Ss][Mm][Aa] ]]; then
@@ -661,13 +661,28 @@ YELLOW='\033[1;33m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+format_bytes() {
+    local b="$1"
+    if [ -z "$b" ] || [ "$b" = "NA" ] || [ "$b" = "None" ]; then
+        echo "Dynamic / Unknown"
+        return
+    fi
+    awk -v b="$b" 'BEGIN {
+        if (b >= 1073741824) printf "%.2f GB\n", b / 1073741824;
+        else if (b >= 1048576) printf "%.2f MB\n", b / 1048576;
+        else if (b >= 1024) printf "%.2f KB\n", b / 1024;
+        else printf "%d B\n", b;
+    }'
+}
+
 show_help() {
-    echo -e "${CYAN}${BOLD}Free Download Manager - CLI Media Downloader (fdm-dl)${NC}"
+    echo -e "${CYAN}${BOLD}Free Download Manager - Accelerated Media Downloader (fdm-dl)${NC}"
     echo "Usage:"
     echo "  fdm-dl [options] <URL>"
     echo ""
     echo "Options:"
     echo "  -h, --help            Show this help message"
+    echo "  -y, --yes             Skip confirmation prompt and start download immediately"
     echo "  -a, --audio-only      Extract and download audio only (best quality MP3/M4A)"
     echo "  -q, --quality RES     Target maximum video resolution (e.g. 1080p, 720p, 4k)"
     echo "  -o, --output DIR      Custom destination folder (default: ~/Downloads)"
@@ -675,6 +690,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  fdm-dl https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    echo "  fdm-dl -y https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     echo "  fdm-dl -a https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     echo "  fdm-dl -q 1080p https://twitter.com/user/status/123456789"
     exit 0
@@ -693,6 +709,7 @@ fi
 
 DEST_DIR="$TARGET_HOME/Downloads"
 AUDIO_ONLY=false
+AUTO_CONFIRM=false
 TARGET_RES=""
 CONCURRENT=8
 URL=""
@@ -701,6 +718,10 @@ while [ "$#" -gt 0 ]; do
     case "$1" in
         -h|--help)
             show_help
+            ;;
+        -y|--yes)
+            AUTO_CONFIRM=true
+            shift
             ;;
         -a|--audio|--audio-only)
             AUDIO_ONLY=true
@@ -740,10 +761,10 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 if [ -n "$MISSING_PKGS" ]; then
-    echo -e "${YELLOW}==>${NC} ${BOLD}Installing media dependencies ($MISSING_PKGS)...${NC}"
+    echo -e "${YELLOW}==>${NC} ${BOLD}Installing required dependencies ($MISSING_PKGS)...${NC}"
     # shellcheck disable=SC2086
     sudo dnf install -y $MISSING_PKGS || {
-        echo -e "${RED}Error:${NC} Failed to install $MISSING_PKGS. Please run: sudo dnf install $MISSING_PKGS"
+        echo -e "${RED}Error:${NC} Failed to install dependencies. Please run: sudo dnf install $MISSING_PKGS"
         exit 1
     }
 fi
@@ -753,23 +774,65 @@ mkdir -p "$DEST_DIR" 2>/dev/null || true
 # Format selection
 if [ "$AUDIO_ONLY" = "true" ]; then
     YTDL_OPTS=(-x --audio-format mp3 --audio-quality 0)
-    MODE_STR="Audio Only (MP3)"
+    MODE_STR="Audio Only (High-Quality MP3)"
 elif [ -n "$TARGET_RES" ]; then
     RES_NUM=$(echo "$TARGET_RES" | tr -cd '0-9')
     YTDL_OPTS=(-f "bestvideo[height<=${RES_NUM}]+bestaudio/best[height<=${RES_NUM}]/best")
     MODE_STR="Video (${TARGET_RES})"
 else
     YTDL_OPTS=(-f "bestvideo+bestaudio/best")
-    MODE_STR="Best Quality (Video + Audio)"
+    MODE_STR="Best Available Quality (Video + Audio)"
 fi
 
-echo -e "${CYAN}${BOLD}==> Free Download Manager CLI Accelerator${NC}"
-echo -e "  • Mode        : ${BOLD}$MODE_STR${NC}"
-echo -e "  • Destination : ${CYAN}$DEST_DIR${NC}"
-echo -e "  • Connections : ${BOLD}$CONCURRENT parallel threads${NC}"
+echo -e "${CYAN}==>${NC} ${BOLD}Analyzing media stream metadata...${NC}"
+
+META_RAW=$(yt-dlp --js-runtimes node \
+                  --remote-components ejs:github \
+                  --extractor-args "youtube:player_client=web,android" \
+                  --no-warnings \
+                  --print "%(title)s:::%(uploader,channel)s:::%(duration_string)s:::%(filesize,filesize_approx)s" \
+                  "${YTDL_OPTS[@]}" \
+                  "$URL" 2>/dev/null | tail -n 1 || true)
+
+TITLE=$(echo "$META_RAW" | awk -F':::' '{print $1}')
+UPLOADER=$(echo "$META_RAW" | awk -F':::' '{print $2}')
+DURATION=$(echo "$META_RAW" | awk -F':::' '{print $3}')
+RAW_SIZE=$(echo "$META_RAW" | awk -F':::' '{print $4}')
+
+[ -z "$TITLE" ] && TITLE="Media Download"
+[ -z "$UPLOADER" ] && UPLOADER="Unknown"
+[ -z "$DURATION" ] && DURATION="N/A"
+EST_SIZE=$(format_bytes "$RAW_SIZE")
+
+echo ""
+echo -e "${CYAN}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
+echo -e "${CYAN}${BOLD}│  🎬 Free Download Manager - Media Download Summary           │${NC}"
+echo -e "${CYAN}${BOLD}├──────────────────────────────────────────────────────────────┤${NC}"
+printf "  ${BOLD}• Title       :${NC} %-48.48s\n" "$TITLE"
+printf "  ${BOLD}• Source/Host :${NC} %-48.48s\n" "$UPLOADER"
+printf "  ${BOLD}• Duration    :${NC} %-48.48s\n" "$DURATION"
+printf "  ${BOLD}• Format/Mode :${NC} %-48.48s\n" "$MODE_STR"
+printf "  ${BOLD}• Est. Size   :${NC} %-48.48s\n" "$EST_SIZE"
+printf "  ${BOLD}• Destination :${NC} %-48.48s\n" "$DEST_DIR"
+printf "  ${BOLD}• Acceleration:${NC} %-48.48s\n" "$CONCURRENT Parallel Connections"
+echo -e "${CYAN}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
 echo ""
 
-# Execute download with multi-connection acceleration & JS challenge solving
+if [ "$AUTO_CONFIRM" != "true" ] && [ -t 0 ]; then
+    read -r -p "Proceed with accelerated download? [Y/n] " CONFIRM
+    CONFIRM=${CONFIRM:-Y}
+    if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}Download cancelled by user.${NC}"
+        exit 0
+    fi
+fi
+
+echo -e "${GREEN}==>${NC} ${BOLD}Starting multi-threaded accelerated download...${NC}"
+echo ""
+
+START_TIME=$(date +%s)
+
+# Execute download with custom formatted progress bar
 yt-dlp -N "$CONCURRENT" \
        --js-runtimes node \
        --remote-components ejs:github \
@@ -782,25 +845,31 @@ yt-dlp -N "$CONCURRENT" \
        "$URL"
 
 EXIT_CODE=$?
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+[ $ELAPSED -eq 0 ] && ELAPSED=1
 
 if [ $EXIT_CODE -eq 0 ]; then
     echo ""
-    echo -e "${GREEN}✔${NC} ${BOLD}Download completed successfully!${NC} Saved to: ${CYAN}$DEST_DIR${NC}"
+    echo -e "${GREEN}${BOLD}✔ Download Completed in ${ELAPSED}s!${NC}"
+    echo -e "  Saved to: ${CYAN}${BOLD}$DEST_DIR${NC}"
     
-    # Desktop Notification
+    # Desktop Notification with Title and Size
     if command -v notify-send >/dev/null 2>&1; then
+        NOTIF_BODY="$TITLE ($EST_SIZE)"
         if [ -n "$DBUS_SESSION_BUS_ADDRESS" ]; then
-            notify-send -i freedownloadmanager -a "Free Download Manager" "Media Download Complete" "Saved to $DEST_DIR" 2>/dev/null || true
+            notify-send -i freedownloadmanager -a "Free Download Manager" "Media Download Complete (⚡ ${ELAPSED}s)" "$NOTIF_BODY" 2>/dev/null || true
         elif [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
             local_uid=$(id -u "$SUDO_USER" 2>/dev/null || true)
             if [ -S "/run/user/$local_uid/bus" ]; then
                 sudo -u "$SUDO_USER" DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$local_uid/bus" \
-                    notify-send -i freedownloadmanager -a "Free Download Manager" "Media Download Complete" "Saved to $DEST_DIR" 2>/dev/null || true
+                    notify-send -i freedownloadmanager -a "Free Download Manager" "Media Download Complete (⚡ ${ELAPSED}s)" "$NOTIF_BODY" 2>/dev/null || true
             fi
         fi
     fi
 else
-    echo -e "${RED}Error:${NC} Download failed with error code $EXIT_CODE."
+    echo ""
+    echo -e "${RED}Error:${NC} Download interrupted or failed with code $EXIT_CODE."
     exit $EXIT_CODE
 fi
 EOF
@@ -904,7 +973,7 @@ _fdm_dl_complete() {
     local cur opts
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
-    opts="--help -h --audio-only -a --quality -q --output -o --connections -c"
+    opts="--help -h --yes -y --audio-only -a --quality -q --output -o --connections -c"
 
     if [[ ${cur} == -* ]] ; then
         COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -1226,6 +1295,7 @@ echo -e "${GREEN}${BOLD}│  ✔ Free Download Manager installed & configured se
 echo -e "${GREEN}${BOLD}├──────────────────────────────────────────────────────────────┤${NC}"
 echo -e "  ${BOLD}• App Launcher :${NC} Search 'Free Download Manager' in your menu"
 echo -e "  ${BOLD}• CLI Launch   :${NC} ${CYAN}fdm &${NC} or ${CYAN}fdm <url>${NC}"
+echo -e "  ${BOLD}• CLI Media    :${NC} ${CYAN}fdm-dl <url>${NC} (or ${CYAN}fdm-dl -a <url>${NC})"
 echo -e "  ${BOLD}• Update Tool  :${NC} ${CYAN}fdm-update${NC} (or ${CYAN}fdm-update --check${NC})"
 echo -e "  ${BOLD}• Health Audit :${NC} ${CYAN}fdm-doctor${NC} (or ${CYAN}fdm-doctor --fix${NC})"
 if [ "$ENABLE_AUTOSTART" = "true" ]; then
