@@ -94,8 +94,13 @@ run_doctor() {
 
     # 1. Core Binaries
     echo -e "${CYAN}[Core Binaries]${NC}"
+    VERSION_STR=""
+    if [ -f /opt/freedownloadmanager/.version ]; then
+        VERSION_STR=" (v$(cat /opt/freedownloadmanager/.version | tr -d '[:space:]'))"
+    fi
+
     if [ -f /opt/freedownloadmanager/fdm ] && [ -x /opt/freedownloadmanager/fdm ]; then
-        echo -e "  ${GREEN}[✓]${NC} FDM binary: /opt/freedownloadmanager/fdm"
+        echo -e "  ${GREEN}[✓]${NC} FDM binary: /opt/freedownloadmanager/fdm${VERSION_STR}"
     else
         echo -e "  ${RED}[✗]${NC} FDM binary missing or not executable"
     fi
@@ -242,6 +247,16 @@ fi
 ar x fdm.deb
 $SUDO tar -xf data.tar.* -C /
 $SUDO chmod +x /opt/freedownloadmanager/fdm /opt/freedownloadmanager/wenativehost 2>/dev/null || true
+
+# Save version metadata
+CONTROL_TAR=$(ar t fdm.deb | grep "control.tar" | head -n 1 || true)
+if [ -n "$CONTROL_TAR" ]; then
+    ar p fdm.deb "$CONTROL_TAR" > "$TMP_DIR/$CONTROL_TAR" 2>/dev/null || true
+    FDM_VER=$(tar -xaf "$TMP_DIR/$CONTROL_TAR" -O ./control 2>/dev/null | grep -i '^Version:' | awk '{print $2}' || true)
+    if [ -n "$FDM_VER" ]; then
+        echo "$FDM_VER" | $SUDO tee /opt/freedownloadmanager/.version >/dev/null
+    fi
+fi
 
 # Create HiDPI & Wayland compatible CLI wrapper in PATH
 cat << 'EOF' > "$TMP_DIR/fdm_cli"

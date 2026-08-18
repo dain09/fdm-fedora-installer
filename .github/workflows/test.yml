@@ -64,8 +64,10 @@ jobs:
               echo '==> 4. Testing System Doctor Diagnosis...'
               ./install.sh --doctor
 
-              echo '==> 5. Testing Update Script...'
+              echo '==> 5. Testing Update Script (Check, Smart & Force)...'
+              ./update.sh --check
               ./update.sh
+              ./update.sh --force
               test -f /usr/local/bin/fdm
 
               echo '==> 6. Testing Clean Removal...'

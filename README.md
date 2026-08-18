@@ -95,16 +95,21 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-instal
 
 ## 🔄 Updating FDM
 
-To update the FDM binaries to the latest release without re-configuring your browsers or settings:
+The updater script automatically checks the latest upstream release metadata (fast probe) before downloading. If you are already on the latest version, it skips redundant downloads:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/dain09/fdm-fedora-installer/main/update.sh)"
 ```
 
-Or run locally if cloned:
-```bash
-./update.sh
-```
+### Options:
+* **Check only without updating:**
+  ```bash
+  ./update.sh --check
+  ```
+* **Force re-download and reinstallation:**
+  ```bash
+  ./update.sh --force
+  ```
 
 ---
 
