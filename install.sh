@@ -80,7 +80,8 @@ Arguments:
 Description:
   Installs Free Download Manager native binaries directly to /opt/freedownloadmanager,
   configures browser Native Messaging Hosts across Chromium and Firefox browsers,
-  registers MIME handlers for torrent/magnet links, and sets up GNOME tray integration.
+  registers MIME handlers for torrent/magnet links, and sets up desktop integration
+  for GNOME, KDE Plasma, and other desktop environments.
 EOF
     exit 0
 }
@@ -156,12 +157,21 @@ run_doctor() {
     done
     echo ""
 
-    # 4. GNOME Tray
-    echo -e "${CYAN}[GNOME Tray (AppIndicator) Support]${NC}"
-    if rpm -q gnome-shell-extension-appindicator >/dev/null 2>&1; then
-        echo -e "  ${GREEN}[✓]${NC} gnome-shell-extension-appindicator package is installed"
+    # 4. Desktop Environment & System Tray
+    echo -e "${CYAN}[Desktop Environment & System Tray]${NC}"
+    DETECTED_DESKTOP="${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-Unknown}}"
+    echo -e "  ${CYAN}[i]${NC} Active Desktop: $DETECTED_DESKTOP"
+
+    if [[ "$DETECTED_DESKTOP" =~ [Kk][Dd][Ee]|[Pp][Ll][Aa][Ss][Mm][Aa] ]]; then
+        echo -e "  ${GREEN}[✓]${NC} KDE Plasma: Native StatusNotifierItem & Qt Tray supported natively"
+    elif [[ "$DETECTED_DESKTOP" =~ [Gg][Nn][Oo][Mm][Ee] ]]; then
+        if rpm -q gnome-shell-extension-appindicator >/dev/null 2>&1; then
+            echo -e "  ${GREEN}[✓]${NC} GNOME AppIndicator extension package installed"
+        else
+            echo -e "  ${YELLOW}[-]${NC} GNOME AppIndicator extension package not installed"
+        fi
     else
-        echo -e "  ${YELLOW}[-]${NC} gnome-shell-extension-appindicator package not installed"
+        echo -e "  ${GREEN}[✓]${NC} System Tray supported"
     fi
     echo ""
     exit 0
@@ -187,10 +197,20 @@ for arg in "$@"; do
     esac
 done
 
-# 3. Check for package manager (Fedora Workstation vs Fedora Atomic/Silverblue)
+# 3. Check for package manager & desktop environment
 info "[1/6] Installing system dependencies..."
+CORE_DEPS="binutils curl desktop-file-utils xdg-utils"
+
+# Add GNOME AppIndicator extension only if not strictly KDE Plasma
+if [[ "${XDG_CURRENT_DESKTOP:-}" =~ [Kk][Dd][Ee]|[Pp][Ll][Aa][Ss][Mm][Aa] ]]; then
+    DESKTOP_DEPS="libappindicator-gtk3"
+else
+    DESKTOP_DEPS="gnome-shell-extension-appindicator libappindicator-gtk3"
+fi
+
 if command -v dnf >/dev/null 2>&1; then
-    $SUDO dnf install -y binutils curl desktop-file-utils xdg-utils gnome-shell-extension-appindicator libappindicator-gtk3
+    # shellcheck disable=SC2086
+    $SUDO dnf install -y $CORE_DEPS $DESKTOP_DEPS
 elif command -v rpm-ostree >/dev/null 2>&1; then
     info "Fedora Atomic (Silverblue/Kinoite/Bazzite) detected."
     warn "Ensure required dependencies are layered with rpm-ostree if not already installed."
@@ -232,12 +252,17 @@ EOF
 $SUDO cp "$TMP_DIR/fdm_cli" /usr/local/bin/fdm
 $SUDO chmod 755 /usr/local/bin/fdm
 
-# Refresh desktop database and icon caches
+# Refresh desktop database and icon caches across GNOME and KDE
 if command -v update-desktop-database >/dev/null 2>&1; then
     $SUDO update-desktop-database || true
 fi
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     $SUDO gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+if command -v kbuildsycoca6 >/dev/null 2>&1; then
+    kbuildsycoca6 --noincremental 2>/dev/null || true
+elif command -v kbuildsycoca5 >/dev/null 2>&1; then
+    kbuildsycoca5 --noincremental 2>/dev/null || true
 fi
 
 info "[3/6] Setting up Native Messaging Hosts..."

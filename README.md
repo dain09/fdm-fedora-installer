@@ -44,7 +44,7 @@ chmod +x install.sh
   * **Vivaldi** & **Opera**
   * **Mozilla Firefox**, **LibreWolf**, **Floorp** & **Waterfox** (`fdm_ffext@freedownloadmanager.org`)
 * **💻 Command-Line Interface (CLI):** Creates a wrapper `/usr/local/bin/fdm` with automatic HiDPI scaling so you can launch FDM directly from terminal (e.g., `fdm <url>`).
-* **🧩 GNOME AppIndicator Support:** Installs `gnome-shell-extension-appindicator` and `libappindicator-gtk3` so FDM can minimize to the top bar properly.
+* **🧩 GNOME & KDE Plasma Tray Support:** Installs AppIndicator support for GNOME and integrates seamlessly with KDE Plasma's native Qt system tray (`StatusNotifierItem`).
 * **🧲 Default Torrent & Magnet Handler:** Registers FDM with `xdg-mime` to open `.torrent` files and `magnet:` links automatically.
 * **🧹 Cleans Up Conflicts:** Removes lingering Flatpak background processes and conflicting installations.
 
