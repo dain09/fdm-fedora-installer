@@ -478,11 +478,27 @@ else
     MODE_STR="Best Available Quality (Video + Audio)"
 fi
 
+# Auto-detect available browser cookies on the system to bypass YouTube bot checks
+COOKIE_OPTS=()
+if [ -d "$TARGET_HOME/.mozilla/firefox" ]; then
+    COOKIE_OPTS=(--cookies-from-browser firefox)
+elif [ -d "$TARGET_HOME/.config/BraveSoftware/Brave-Browser" ]; then
+    COOKIE_OPTS=(--cookies-from-browser brave)
+elif [ -d "$TARGET_HOME/.config/google-chrome" ]; then
+    COOKIE_OPTS=(--cookies-from-browser chrome)
+elif [ -d "$TARGET_HOME/.config/chromium" ]; then
+    COOKIE_OPTS=(--cookies-from-browser chromium)
+elif [ -d "$TARGET_HOME/.zen" ]; then
+    COOKIE_OPTS=(--cookies-from-browser zen)
+elif [ -d "$TARGET_HOME/.librewolf" ]; then
+    COOKIE_OPTS=(--cookies-from-browser librewolf)
+fi
+
 echo -e "${CYAN}==>${NC} ${BOLD}Analyzing media stream metadata...${NC}"
 
-META_RAW=$(yt-dlp --js-runtimes node \
+META_RAW=$(yt-dlp "${COOKIE_OPTS[@]}" \
+                  --js-runtimes node \
                   --remote-components ejs:github \
-                  --extractor-args "youtube:player_client=web,android" \
                   --no-warnings \
                   --print "%(title)s:::%(uploader,channel)s:::%(duration_string)s:::%(filesize,filesize_approx)s" \
                   "${YTDL_OPTS[@]}" \
@@ -528,9 +544,9 @@ START_TIME=$(date +%s)
 
 # Execute download with custom formatted progress bar
 yt-dlp -N "$CONCURRENT" \
+       "${COOKIE_OPTS[@]}" \
        --js-runtimes node \
        --remote-components ejs:github \
-       --extractor-args "youtube:player_client=web,android" \
        --no-warnings \
        --progress \
        -P "$DEST_DIR" \
