@@ -1,0 +1,20 @@
+name: Test Installer on Fedora
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-fedora:
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Install Script
+        run: |
+          dnf install -y sudo git
+          chmod +x install.sh
+          ./install.sh
