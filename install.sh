@@ -17,8 +17,8 @@ sudo tar -xf data.tar.* -C /
 sudo update-desktop-database
 rm -rf "$TMP_DIR"
 
-echo "==> [2/4] Configuring Browser Native Messaging Hosts..."
-# Target paths for Chromium-based browsers (Brave, Chrome, Chromium)
+echo "==> [2/4] Configuring Browser Native Messaging Hosts (Chromium & Firefox)..."
+# 1. Chromium-based Browsers (Brave, Chrome, Chromium)
 HOST_DIRS=(
     "$HOME/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts"
     "$HOME/.config/BraveSoftware/Brave-Browser/NativeMessagingHosts"
@@ -26,7 +26,7 @@ HOST_DIRS=(
     "$HOME/.config/chromium/NativeMessagingHosts"
 )
 
-JSON_CONTENT='{
+CHROMIUM_JSON='{
   "name": "org.freedownloadmanager.fdm5.cnh",
   "description": "Free Download Manager",
   "path": "/opt/freedownloadmanager/wenativehost",
@@ -39,9 +39,26 @@ JSON_CONTENT='{
 
 for DIR in "${HOST_DIRS[@]}"; do
     mkdir -p "$DIR"
-    echo "$JSON_CONTENT" > "$DIR/org.freedownloadmanager.fdm5.cnh.json"
+    echo "$CHROMIUM_JSON" > "$DIR/org.freedownloadmanager.fdm5.cnh.json"
     chmod 644 "$DIR/org.freedownloadmanager.fdm5.cnh.json"
 done
+
+# 2. Mozilla Firefox
+FIREFOX_DIR="$HOME/.mozilla/native-messaging-hosts"
+mkdir -p "$FIREFOX_DIR"
+
+cat << 'EOF' > "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
+{
+  "name": "org.freedownloadmanager.fdm5.cnh",
+  "description": "Free Download Manager",
+  "path": "/opt/freedownloadmanager/wenativehost",
+  "type": "stdio",
+  "allowed_extensions": [
+    "fdm_ffext@freedownloadmanager.org"
+  ]
+}
+EOF
+chmod 644 "$FIREFOX_DIR/org.freedownloadmanager.fdm5.cnh.json"
 
 echo "==> [3/4] Installing GNOME System Tray (AppIndicator) support..."
 sudo dnf install -y gnome-shell-extension-appindicator libappindicator-gtk3
