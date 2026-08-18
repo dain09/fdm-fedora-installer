@@ -28,6 +28,10 @@ body:
         - Microsoft Edge
         - Vivaldi
         - Opera
+        - LibreWolf
+        - Floorp
+        - Waterfox
+        - Zen Browser
         - Other
     validations:
       required: true

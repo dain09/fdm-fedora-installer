@@ -243,7 +243,7 @@ done
 
 # 3. Check for package manager & desktop environment
 info "[1/6] Installing system dependencies..."
-CORE_DEPS="binutils curl desktop-file-utils xdg-utils"
+CORE_DEPS="binutils curl desktop-file-utils xdg-utils bubblewrap libxcb libxkbcommon-x11"
 
 # Add GNOME AppIndicator extension only if not strictly KDE Plasma
 if [[ "${XDG_CURRENT_DESKTOP:-}" =~ [Kk][Dd][Ee]|[Pp][Ll][Aa][Ss][Mm][Aa] ]]; then
@@ -333,10 +333,37 @@ fi
 cat << 'EOF' > "$TMP_DIR/fdm_cli"
 #!/usr/bin/env bash
 export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland;xcb}"
 exec /opt/freedownloadmanager/fdm "$@"
 EOF
 $SUDO cp "$TMP_DIR/fdm_cli" /usr/local/bin/fdm
 $SUDO chmod 755 /usr/local/bin/fdm
+
+# Install High-Resolution Icons
+if [ -f /opt/freedownloadmanager/icon.png ]; then
+    $SUDO mkdir -p /usr/share/icons/hicolor/128x128/apps /usr/share/pixmaps 2>/dev/null || true
+    $SUDO cp /opt/freedownloadmanager/icon.png /usr/share/icons/hicolor/128x128/apps/freedownloadmanager.png
+    $SUDO cp /opt/freedownloadmanager/icon.png /usr/share/pixmaps/freedownloadmanager.png
+fi
+
+# Create standardized freedesktop .desktop launcher
+cat << 'EOF' > "$TMP_DIR/freedownloadmanager.desktop"
+[Desktop Entry]
+Name=Free Download Manager
+GenericName=Download Manager
+Comment=Fast, modern download accelerator and BitTorrent client
+Keywords=download;manager;accelerator;torrent;magnet;p2p;fdm;
+Exec=/usr/local/bin/fdm %U
+Terminal=false
+Type=Application
+Icon=freedownloadmanager
+Categories=Network;FileTransfer;P2P;Qt;
+StartupNotify=true
+StartupWMClass=fdm
+MimeType=application/x-bittorrent;x-scheme-handler/magnet;
+EOF
+$SUDO cp "$TMP_DIR/freedownloadmanager.desktop" /usr/share/applications/freedownloadmanager.desktop
+$SUDO chmod 644 /usr/share/applications/freedownloadmanager.desktop
 
 # Refresh desktop database and icon caches across GNOME and KDE
 if command -v update-desktop-database >/dev/null 2>&1; then
