@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [ "latest", "41", "40" ]
+        version: [ "latest", "rawhide" ]
 
     steps:
       - name: Checkout Code
