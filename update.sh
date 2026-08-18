@@ -43,6 +43,8 @@ EOF
     echo -e "${DIM}------------------------------------------------------------${NC}"
 }
 
+SUITE_VERSION="1.2.0"
+
 show_help() {
     show_banner
     cat << EOF
@@ -51,8 +53,10 @@ Usage:
 
 Options:
   -h, --help       Show this help message and exit
+  -v, --version    Show updater version and exit
   -f, --force      Force update / re-download even if already up to date
   -c, --check      Check for updates without downloading or installing
+  -y, --yes        Non-interactive mode
 
 Description:
   Checks upstream Free Download Manager releases. If a newer version is available,
@@ -69,11 +73,17 @@ for arg in "$@"; do
         -h|--help)
             show_help
             ;;
+        -v|--version)
+            echo "Free Download Manager In-Place Updater v${SUITE_VERSION}"
+            exit 0
+            ;;
         -f|--force)
             FORCE_UPDATE=true
             ;;
         -c|--check)
             CHECK_ONLY=true
+            ;;
+        -y|--yes)
             ;;
     esac
 done

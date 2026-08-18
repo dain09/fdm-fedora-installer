@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: [ "latest", "43" ]
+        version: [ "latest", "41", "40" ]
 
     steps:
       - name: Checkout Code
@@ -43,19 +43,24 @@ jobs:
             fedora:${{ matrix.version }} \
             /bin/bash -c "
               set -e
-              echo '==> 1. Testing Help Flags...'
+              echo '==> 1. Testing Help & Version Flags...'
               chmod +x install.sh update.sh uninstall.sh
               ./install.sh --help
+              ./install.sh --version
               ./update.sh --help
+              ./update.sh --version
               ./uninstall.sh --help
+              ./uninstall.sh --version
 
-              echo '==> 2. Running Installation...'
-              ./install.sh
+              echo '==> 2. Running Full Installation with Autostart...'
+              ./install.sh --autostart
 
               echo '==> 3. Verifying Core Executables, Symlinks & Browser Manifests...'
               test -f /opt/freedownloadmanager/wenativehost
               test -f /opt/freedownloadmanager/fdm
               test -f /usr/local/bin/fdm
+              test -f /usr/local/bin/fdm-update
+              test -f /usr/local/bin/fdm-doctor
               test -f /usr/share/applications/freedownloadmanager.desktop
               test -f \"\$HOME/.mozilla/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
               test -f \"\$HOME/.librewolf/native-messaging-hosts/org.freedownloadmanager.fdm5.cnh.json\"
@@ -71,9 +76,11 @@ jobs:
               test -f /usr/local/bin/fdm
 
               echo '==> 6. Testing Clean Removal...'
-              ./uninstall.sh
+              ./uninstall.sh --yes
               test ! -d /opt/freedownloadmanager
               test ! -f /usr/local/bin/fdm
+              test ! -f /usr/local/bin/fdm-update
+              test ! -f /usr/local/bin/fdm-doctor
               
-              echo '==> All checks passed!'
+              echo '==> All CI checks passed successfully!'
             "

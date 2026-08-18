@@ -128,6 +128,8 @@ FLATPAK_APPS=(
     "com.opera.OperaGX:config/opera-gx/NativeMessagingHosts:chromium"
 )
 
+SUITE_VERSION="1.2.0"
+
 show_help() {
     show_banner
     cat << EOF
@@ -136,9 +138,11 @@ Usage:
 
 Options:
   -h, --help       Show this help message and exit
+  -v, --version    Show installer suite version and exit
   -d, --doctor     Run system diagnostic report and verify installation health
   -f, --force      Force full package re-download even if already up to date
   -a, --autostart  Enable silent autostart on system boot (minimized to tray)
+  -y, --yes        Non-interactive mode (automatic yes to prompts)
 
 Arguments:
   [path/to/fdm.deb] Optional local debian package file to install offline
@@ -303,6 +307,10 @@ for arg in "$@"; do
         -h|--help)
             show_help
             ;;
+        -v|--version)
+            echo "Free Download Manager Fedora Installer Suite v${SUITE_VERSION}"
+            exit 0
+            ;;
         -d|--doctor|--status|--check)
             run_doctor
             ;;
@@ -311,6 +319,8 @@ for arg in "$@"; do
             ;;
         -a|--autostart)
             ENABLE_AUTOSTART=true
+            ;;
+        -y|--yes)
             ;;
         *.deb)
             if [ -f "$arg" ]; then
@@ -516,11 +526,25 @@ _fdm_update_complete() {
     fi
 }
 complete -F _fdm_update_complete fdm-update
+
+_fdm_doctor_complete() {
+    local cur opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    opts="--help -h"
+
+    if [[ ${cur} == -* ]] ; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+}
+complete -F _fdm_doctor_complete fdm-doctor
 EOF
 $SUDO mkdir -p /usr/share/bash-completion/completions 2>/dev/null || true
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm
 $SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-update
-$SUDO chmod 644 /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update 2>/dev/null || true
+$SUDO cp "$TMP_DIR/fdm_completion" /usr/share/bash-completion/completions/fdm-doctor
+$SUDO chmod 644 /usr/share/bash-completion/completions/fdm /usr/share/bash-completion/completions/fdm-update /usr/share/bash-completion/completions/fdm-doctor 2>/dev/null || true
 
 # DNF Integration Hook (runs fdm-update alongside sudo dnf update / upgrade)
 cat << 'EOF' > "$TMP_DIR/fdm_dnf_hook.sh"

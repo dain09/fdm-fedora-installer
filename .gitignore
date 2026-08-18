@@ -1,0 +1,22 @@
+# Temporary download & packaging files
+*.deb
+*.tar
+*.tar.gz
+*.tar.xz
+*.tar.bz2
+*.tmp
+*.log
+data.tar.*
+control.tar.*
+fdm_probe.deb
+
+# Editor & System metadata
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Temporary scratch directories
+scratch/
+tmp/

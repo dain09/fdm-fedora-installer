@@ -41,6 +41,8 @@ EOF
     echo -e "${DIM}------------------------------------------------------------${NC}"
 }
 
+SUITE_VERSION="1.2.0"
+
 show_help() {
     show_banner
     cat << EOF
@@ -49,6 +51,7 @@ Usage:
 
 Options:
   -h, --help       Show this help message and exit
+  -v, --version    Show uninstaller version and exit
   -y, --yes        Automatic yes to prompts (non-interactive mode)
 
 Description:
@@ -65,6 +68,10 @@ for arg in "$@"; do
     case "$arg" in
         -h|--help)
             show_help
+            ;;
+        -v|--version)
+            echo "Free Download Manager Uninstallation Suite v${SUITE_VERSION}"
+            exit 0
             ;;
         -y|--yes|-f|--force)
             AUTO_CONFIRM=true
