@@ -72,6 +72,7 @@ show_banner() {
                             |_|                             
 EOF
     echo -e "${NC}${CYAN} Free Download Manager In-Place Updater${NC}"
+    echo -e "${DIM} Maintained by Abdallah Ibrahim (@dain09) | github.com/dain09/fdm-fedora-installer${NC}"
     echo -e "${DIM}------------------------------------------------------------${NC}"
 }
 
@@ -410,7 +411,7 @@ EST_SIZE=$(format_bytes "$RAW_SIZE")
 
 echo ""
 echo -e "${CYAN}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
-echo -e "${CYAN}${BOLD}│  🎬 Free Download Manager - Media Download Summary           │${NC}"
+echo -e "${CYAN}${BOLD}│  🎬 Free Download Manager - Media Downloader (@dain09)       │${NC}"
 echo -e "${CYAN}${BOLD}├──────────────────────────────────────────────────────────────┤${NC}"
 printf "  ${BOLD}• Title       :${NC} %-48.48s\n" "$TITLE"
 printf "  ${BOLD}• Source/Host :${NC} %-48.48s\n" "$UPLOADER"

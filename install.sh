@@ -71,6 +71,7 @@ show_banner() {
  |_|   |____/|_|  |_| |_|_| |_|___/\__\__,_|_|_|\___|_|   
 EOF
     echo -e "${NC}${CYAN} Native Free Download Manager Suite for Fedora Linux${NC}"
+    echo -e "${DIM} Maintained by Abdallah Ibrahim (@dain09) | github.com/dain09/fdm-fedora-installer${NC}"
     echo -e "${DIM}------------------------------------------------------------${NC}"
 }
 
@@ -352,6 +353,7 @@ EOF
 run_doctor() {
     show_banner
     echo -e "${BOLD}=== System Diagnostic & Health Audit ===${NC}"
+    echo -e "${DIM}Maintained by Abdallah Ibrahim (@dain09)${NC}"
     echo ""
 
     # 1. Core Binaries
@@ -808,7 +810,7 @@ EST_SIZE=$(format_bytes "$RAW_SIZE")
 
 echo ""
 echo -e "${CYAN}${BOLD}┌──────────────────────────────────────────────────────────────┐${NC}"
-echo -e "${CYAN}${BOLD}│  🎬 Free Download Manager - Media Download Summary           │${NC}"
+echo -e "${CYAN}${BOLD}│  🎬 Free Download Manager - Media Downloader (@dain09)       │${NC}"
 echo -e "${CYAN}${BOLD}├──────────────────────────────────────────────────────────────┤${NC}"
 printf "  ${BOLD}• Title       :${NC} %-48.48s\n" "$TITLE"
 printf "  ${BOLD}• Source/Host :${NC} %-48.48s\n" "$UPLOADER"
@@ -1305,6 +1307,9 @@ if [ "$ENABLE_AUTOSTART" = "true" ]; then
 else
     echo -e "  ${BOLD}• Autostart    :${NC} Run ${CYAN}./install.sh -a${NC} to start with system"
 fi
+echo -e "${GREEN}${BOLD}├──────────────────────────────────────────────────────────────┤${NC}"
+echo -e "  ${DIM}• Developed by : Abdallah Ibrahim (@dain09)${NC}"
+echo -e "  ${DIM}• GitHub Repo  : https://github.com/dain09/fdm-fedora-installer${NC}"
 echo -e "${GREEN}${BOLD}└──────────────────────────────────────────────────────────────┘${NC}"
 echo ""
 

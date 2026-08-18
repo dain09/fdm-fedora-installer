@@ -40,6 +40,7 @@ show_banner() {
  |_|   |____/|_|  |_|  \___/|_| |_|_|_| |_|___/\__\__,_|_|_|\___|_|   
 EOF
     echo -e "${NC}${RED} Free Download Manager Uninstallation Tool${NC}"
+    echo -e "${DIM} Maintained by Abdallah Ibrahim (@dain09) | github.com/dain09/fdm-fedora-installer${NC}"
     echo -e "${DIM}------------------------------------------------------------${NC}"
 }
 
