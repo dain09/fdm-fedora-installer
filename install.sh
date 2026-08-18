@@ -858,7 +858,19 @@ if [ "$AUDIO_ONLY" = "true" ]; then
     YTDL_OPTS=(--no-playlist -x --audio-format mp3 --audio-quality 0)
     MODE_STR="Audio Only (High-Quality MP3)"
 elif [ -n "$TARGET_RES" ]; then
-    RES_NUM=$(echo "$TARGET_RES" | tr -cd '0-9')
+    CLEAN_RES=$(echo "$TARGET_RES" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+    case "$CLEAN_RES" in
+        *4k*)
+            RES_NUM=2160
+            ;;
+        *2k*|*1440*)
+            RES_NUM=1440
+            ;;
+        *)
+            RES_NUM=$(echo "$CLEAN_RES" | tr -cd '0-9')
+            ;;
+    esac
+
     if [ -n "$RES_NUM" ]; then
         YTDL_OPTS=(--no-playlist -f "bestvideo[height<=${RES_NUM}]+bestaudio/best[height<=${RES_NUM}]/best")
         MODE_STR="Video (${RES_NUM}p)"
